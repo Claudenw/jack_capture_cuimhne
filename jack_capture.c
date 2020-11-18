@@ -108,8 +108,18 @@ static bool use_meterbridge=false;
 static bool show_bufferusage=true;
 static char *meterbridge_type="vu";
 static char *meterbridge_reference="0";
+
+#ifdef __CUIMHNE__
+#include <fcntl.h>
+#define vu_len 20
+#define VU_DEVICE "/dev/lcd0"
+static int vu_lcd;
+#else
+
 //static const int vu_len=56;
 #define vu_len 65
+#endif
+
 static int vu_dB=true;
 static float vu_bias=1.0f;
 static int leading_zeros=1;
@@ -532,6 +542,7 @@ static const char **portnames_get_connections(int ch, bool *using_calloc){
 
 
 // Function iec_scale picked from meterbridge by Steve Harris.
+// returns [0,200] range
 static int iec_scale(float db) {
          float def = 0.0f; /* Meter deflection %age */
 
@@ -566,6 +577,7 @@ static void print_ln(void){
 }
 
 static void print_console_top(void){
+#ifndef __CUIMHNE__
   if(use_vu){
     int lokke=0;
     char c='"';
@@ -582,21 +594,27 @@ static void print_console_top(void){
   }else{
     //print_ln();
   }
+#endif
 }
 
 static void init_vu(void){
+#ifndef __CUIMHNE__
   //int num_channels=4;
   int ch;
   for(ch=0;ch<num_channels;ch++)
     print_ln();
+#endif
 }
 
 static void init_show_bufferusage(void){
+#ifndef __CUIMHNE__
   print_ln();
+#endif
 }
 
 
 static void move_cursor_to_top(void){
+#ifndef __CUIMHNE__
   printf("%c[%dA",0x1b,
          use_vu&&show_bufferusage
          ? num_channels+1
@@ -607,20 +625,51 @@ static void move_cursor_to_top(void){
              : 0);
   printf("%c[0m",0x1b); // reset colors
   fflush(stdout);
+#endif
 }
 
-static char *vu_not_recording="-----------Press <Return> to start recording------------";
+static char *vu_not_recording="Press <Return> to start recording";
 
+static void set_color( int code ){
+#ifndef __CUIMHNE__
+    printf("%c[%im",0x1b, code );
+#endif
+}
+#ifdef __CUIMHNE__
+static void print_framed_meter( int ch, float peak, char* vol ) {
+    char line[vu_len+7];
+    line[vu_len+6] = 0;
+    if (ch <= 1) {
+        sprintf( line, "%i[%i;0H%s", 0x1B, ch-1, vol );
+        int i = write( vu_lcd, line, vu_len+6 );
+    }
+}
+#else
+static void print_framed_meter( int ch, float peak, char* vol ) {
+  // Set cyan color
+  set_color(36);
+  printf( "%02i:|", ch)
+
+  if(peak>=1.0f){
+      vol[vu_len-1]='!';
+      set_color( 31 ); //red
+      puts( vol )
+      set_color( 36 ); // cyan
+  } else {
+      puts( vol );
+  }
+  puts( "|" )
+
+}
+#endif
 // Console colors:
 // http://www.linuxjournal.com/article/8603
 
 static void print_console(bool move_cursor_to_top_doit,bool force_update){
   //int num_channels=4;
   int ch;
-  char vol[vu_len+50];
-  vol[2]          = ':';
-  vol[3]          = '|';
-  vol[4+vu_len+1] = 0;
+  char vol[vu_len+1];
+  vol[vu_len] = 0;
 
   // Values have not been updated since last time. Return.
   if(force_update==false && vu_vals[0]==-1.0f)
@@ -630,9 +679,6 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     move_cursor_to_top();
 
   if(use_vu){
-
-    // Set cyan color
-    printf("%c[36m",0x1b);
 
     for(ch=0;ch<num_channels;ch++){
       int   i;
@@ -654,56 +700,32 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         vu_peakvals[ch] = val;
       }
 
-      if(ch>9){
-        vol[0] = '0'+ch/10;
-        vol[1] = '0'+ch-(10*(ch/10));
-      }else{
-        vol[0] = '0';
-        vol[1] = '0'+ch;
-      }
+
 
       if (timemachine_mode==true && timemachine_recording==false) {
-
-        for(i=0;i<pos && val>0.0f;i++)
-          vol[4+i] = vu_not_recording[i];
-
-        vol[4+pos]='\0';
-
-        if(vu_peakvals[ch]>=1.0f)
-          printf("%c[31m",0x1b); // Peaking, show red color
-
-        printf("%s", vol);
-
-        for(;i<vu_len;i++)
-          vol[4+i] = vu_not_recording[i];
-
-        printf("%c[33m",0x1b); // Yellow color
-
-        vol[i+4]='\0';
-        printf("%s", vol+4+pos);
-
-        printf("%c[36m",0x1b); // back to cyan
-        printf("|\n");
+        if (strlen( vu_not_recording )>=vu_len) {
+            strncpy( vol, vu_not_recording, vu_len );
+        } else {
+            int diff = vu_len - strlen( vu_not_recording ) / 2;
+            for (i=0;i<diff;i++) {
+                vol[i]='-';
+                vol[vu_len-i]='-';
+            }
+            strcpy( vol+diff, vu_not_recording );
+        }
+        print_framed_meter( ch, vu_peakvals[ch], vol );
 
       } else {
 
         for(i=0;i<vu_len;i++)
           if(vu_peaks[ch]==i && vu_peakvals[ch]>0.0f)
-            vol[4+i] = '*';
+            vol[i] = '*';
           else if(i<=pos && val>0.0f)
-            vol[4+i] = '-';
+            vol[i] = '-';
           else
-            vol[4+i] = ' ';
+            vol[i] = ' ';
 
-        if(vu_peakvals[ch]>=1.0f){
-          vol[4+vu_len]='!';
-          printf("%c[31m",0x1b); //red color
-          puts(vol);
-          printf("%c[36m",0x1b); // back to cyan
-        }else{
-          vol[4+vu_len]='|';
-          puts(vol);
-        }
+        print_framed_meter( ch, vu_peakvals[ch], vol );
 
       }
     }
@@ -2138,6 +2160,7 @@ static void finish(int sig){
 
 static void jack_shutdown(void *arg){
   (void)arg;
+  close( vu_lcd );
   fprintf(stderr,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
   SEM_SIGNAL(stop_sem);
@@ -2162,6 +2185,8 @@ static void start_jack(void){
   static bool I_am_already_called=false;
   if(I_am_already_called) // start_jack is called more than once if the --port argument has been used.
     return;
+
+  vu_lcd = open( VU_DEVICE ,O_WRONLY);
 
   client=new_jack_client(jackname);
 
