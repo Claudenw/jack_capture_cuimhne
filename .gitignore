@@ -1,0 +1,8 @@
+.project
+*.out
+config_flags
+das_config.h
+jack_capture
+setformat.c
+temp.c
+
