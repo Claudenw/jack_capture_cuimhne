@@ -645,7 +645,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
       line[3] = ';';
       line[4] = '0';
       line[5] = 'H';
-      memcpy( (line+6), vol, vu_len )
+      memcpy( (line+6), vol, vu_len );
       int i = write( vu_lcd, line, vu_len+6 );
     }
 }
