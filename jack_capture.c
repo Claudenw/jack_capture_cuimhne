@@ -705,7 +705,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
       if (timemachine_mode==true && timemachine_recording==false) {
         if (strlen( vu_not_recording )>=vu_len) {
             strncpy( vol, vu_not_recording, vu_len );
-            vol[vu_len]=0
+            vol[vu_len]=0;
         } else {
             int diff = vu_len - strlen( vu_not_recording ) / 2;
             for (i=0;i<diff;i++) {
