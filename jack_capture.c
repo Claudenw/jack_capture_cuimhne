@@ -640,7 +640,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
     char line[vu_len+7];
     line[vu_len+6] = 0;
     if (ch <= 1) {
-        sprintf( line, "%i[%i;0H%s", 0x1B, ch-1, vol );
+        sprintf( line, "%c[%1i;0H%s", 0x1B, ch-1, vol );
         int i = write( vu_lcd, line, vu_len+6 );
     }
 }
@@ -705,6 +705,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
       if (timemachine_mode==true && timemachine_recording==false) {
         if (strlen( vu_not_recording )>=vu_len) {
             strncpy( vol, vu_not_recording, vu_len );
+            vol[vu_len]=0
         } else {
             int diff = vu_len - strlen( vu_not_recording ) / 2;
             for (i=0;i<diff;i++) {
