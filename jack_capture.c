@@ -637,11 +637,12 @@ static void set_color( int code ){
 }
 #ifdef __CUIMHNE__
 static void print_framed_meter( int ch, float peak, char* vol ) {
+    printf( "line: %s\n" vol );
     char line[vu_len+7];
     if (ch <= 1) {
       line[0] = (char)0x1B;
       line[1] ='[';
-      line[2] = '0'+ch;
+      line[2] = '2'+ch;
       line[3] = ';';
       line[4] = '0';
       line[5] = 'H';
