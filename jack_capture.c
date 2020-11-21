@@ -637,7 +637,7 @@ static void set_color( int code ){
 }
 #ifdef __CUIMHNE__
 static void print_framed_meter( int ch, float peak, char* vol ) {
-    printf( "line: %s\n" vol );
+    printf( "line: [%s]\n", vol );
     char line[vu_len+7];
     if (ch <= 1) {
       line[0] = (char)0x1B;
@@ -670,6 +670,50 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 #endif
 // Console colors:
 // http://www.linuxjournal.com/article/8603
+
+#ifdef __CUIMHNE__
+tatic void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
+    printf( "line: [%s]\n", vol );
+    char line[100];
+    sprintf( line, "%c[1;0HB:%.2f T:%0.2i:%0.2i D:%c O:%d X:%d" , (char)0x1B, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds,
+            disk_thread_has_high_priority?'x':' ', total_overruns, total_xruns );
+      int i = write( vu_lcd, line, strlen(line) );
+    }
+}
+#else
+
+static void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
+
+    char buffer_string[1000];
+    {
+      sprintf(buffer_string,"%.2fs./%.2fs",bufleft,buflen);
+      int len_buffer=strlen(buffer_string);
+      int i;
+      for(i=len_buffer;i<14;i++)
+        buffer_string[i]=' ';
+      buffer_string[i]='\0';
+    }
+
+    printf("%c[32m"
+           "Buffer: %s"
+           "  Time: %d.%s%dm.  %s"
+           "DHP: [%c]  "
+           "Overruns: %d  "
+           "Xruns: %d"
+           "%c[0m",
+           //fmaxf(0.0f,buflen-bufleft),buflen,
+           0x1b, // green color
+           buffer_string,
+           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"",
+           disk_thread_has_high_priority?'x':' ',
+           total_overruns,
+           total_xruns,
+           0x1b // reset color
+           );
+    print_ln();
+}
+
+#endif
 
 static void print_console(bool move_cursor_to_top_doit,bool force_update){
   //int num_channels=4;
@@ -748,33 +792,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
       recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
     int   recorded_minutes = recorded_seconds/60;
 
-    char buffer_string[1000];
-    {
-      sprintf(buffer_string,"%.2fs./%.2fs",bufleft,buflen);
-      int len_buffer=strlen(buffer_string);
-      int i;
-      for(i=len_buffer;i<14;i++)
-        buffer_string[i]=' ';
-      buffer_string[i]='\0';
-    }
-
-    printf("%c[32m"
-           "Buffer: %s"
-           "  Time: %d.%s%dm.  %s"
-           "DHP: [%c]  "
-           "Overruns: %d  "
-           "Xruns: %d"
-           "%c[0m",
-           //fmaxf(0.0f,buflen-bufleft),buflen,
-           0x1b, // green color
-           buffer_string,
-           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"",
-           disk_thread_has_high_priority?'x':' ',
-           total_overruns,
-           total_xruns,
-           0x1b // reset color
-           );
-    print_ln();
+    print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds );
   }else{
     printf("%c[0m",0x1b); // reset colors
     fprintf(stderr,"%c[0m",0x1b); // reset colors
