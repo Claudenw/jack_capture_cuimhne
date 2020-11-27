@@ -672,13 +672,11 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 // http://www.linuxjournal.com/article/8603
 
 #ifdef __CUIMHNE__
-tatic void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
-    printf( "line: [%s]\n", vol );
+static void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
     char line[100];
-    sprintf( line, "%c[1;0HB:%.2f T:%0.2i:%0.2i D:%c O:%d X:%d" , (char)0x1B, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds,
+    sprintf( line, "%c[0;0HB:%4.2f T%02i:%02i \nD:%c O:%d X:%d" , (char)0x1B, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds,
             disk_thread_has_high_priority?'x':' ', total_overruns, total_xruns );
-      int i = write( vu_lcd, line, strlen(line) );
-    }
+    int i = write( vu_lcd, line, strlen(line) );
 }
 #else
 
@@ -696,7 +694,7 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
 
     printf("%c[32m"
            "Buffer: %s"
-           "  Time: %d.%s%dm.  %s"
+           "  Time: %02i:%02i "
            "DHP: [%c]  "
            "Overruns: %d  "
            "Xruns: %d"
@@ -704,7 +702,7 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
            //fmaxf(0.0f,buflen-bufleft),buflen,
            0x1b, // green color
            buffer_string,
-           recorded_minutes, recorded_seconds%60<10?"0":"", recorded_seconds%60, recorded_minutes<10?" ":"",
+           recorded_minutes, recorded_seconds,
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            total_xruns,
@@ -792,7 +790,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
       recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
     int   recorded_minutes = recorded_seconds/60;
 
-    print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds );
+    print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds%60 );
   }else{
     printf("%c[0m",0x1b); // reset colors
     fprintf(stderr,"%c[0m",0x1b); // reset colors
