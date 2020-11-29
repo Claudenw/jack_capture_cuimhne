@@ -112,7 +112,7 @@ static char *meterbridge_reference="0";
 #ifdef __CUIMHNE__
 #include <fcntl.h>
 #define vu_len 20
-static char* vu_device "/dev/lcd0"
+static char* vu_device="/dev/lcd0";
 static int vu_lcd;
 #else
 
