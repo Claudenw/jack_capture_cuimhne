@@ -112,7 +112,7 @@ static char *meterbridge_reference="0";
 #ifdef __CUIMHNE__
 #include <fcntl.h>
 #define vu_len 20
-#define VU_DEVICE "/dev/lcd0"
+static char* vu_device "/dev/lcd0"
 static int vu_lcd;
 #else
 
@@ -2209,7 +2209,7 @@ static void start_jack(void){
   if(I_am_already_called) // start_jack is called more than once if the --port argument has been used.
     return;
 
-  vu_lcd = open( VU_DEVICE ,O_WRONLY);
+  vu_lcd = open( vu_device ,O_WRONLY);
 
   client=new_jack_client(jackname);
 
@@ -2256,6 +2256,11 @@ static void start_keypress_thread(void){
 static const char *advanced_help =
   "jack_capture  [--bitdepth n] [--channels n] [--port port] [filename]\n"
   "              [ -b        n] [ -c        n] [ -p    port]\n"
+#ifdef __CUIMHNE__
+  "\n"
+  "This version has CuimhneCeoil extension to write to lcd device (see --device option)\n"
+#endif
+  "\n"
   "\n"
   "\"bitdepth\" is by default FLOAT. It can be set to either 8, 16, 24 or 32. (for relevant formats)\n"
   "\"channels\" is by default 2.\n"
@@ -2303,6 +2308,9 @@ static const char *advanced_help =
   "[--disable-meter] or [-dm]        -> Disable console meter.\n"
   "[--hide-buffer-usage] or [-hbu]   -> Disable buffer usage updates in the console.\n"
   "[--disable-console] or [-dc]      -> Disable console updates. Same as \"-dm -hbu\".\n"
+#ifdef __CUIMHNE__
+  "[--device] or [-dev]              -> Specify the console output device (defaults to /dev/lcd0)\n"
+#endif
   "[--no-stdin] or [-ns]             -> Don't read the console. (i.e pressing return won't stop recording.)\n"
   "[--daemon]                        -> Same as writing \"--no-stdin --absolutely-silent\".\n"
   "[--linear-meter] or [-lm]         -> Use linear scale for the console meter (default is dB scale)\n"
@@ -2461,6 +2469,9 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--disable-meter","-dm") use_vu=false;
       OPTARG("--hide-buffer-usage","-hbu") show_bufferusage=false;
       OPTARG("--disable-console","-dc") use_vu=false;show_bufferusage=false;
+#ifdef __CUIMHNE__
+      OPTARG("--device","-dev") vu_device=OPTARG_GETSTRING();
+#endif
       OPTARG("--no-stdin","-ns") no_stdin=true;
       OPTARG("--daemon","") no_stdin=true; absolutely_silent=true; use_vu=false; silent=true; show_bufferusage=false;
       OPTARG("--linear-meter","-lm") vu_dB=false;
