@@ -637,7 +637,6 @@ static void set_color( int code ){
 }
 #ifdef __CUIMHNE__
 static void print_framed_meter( int ch, float peak, char* vol ) {
-    printf( "line: [%s]\n", vol );
     char line[vu_len+7];
     if (ch <= 1) {
       line[0] = (char)0x1B;
@@ -674,9 +673,10 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 #ifdef __CUIMHNE__
 static void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
     char line[100];
-    sprintf( line, "%c[0;0HB:%4.2f T%02i:%02i \nD:%c O:%d X:%d" , (char)0x1B, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds,
-            disk_thread_has_high_priority?'x':' ', total_overruns, total_xruns );
-    int i = write( vu_lcd, line, strlen(line) );
+    sprintf( line, "%c[0;0HB:%4.2f T%02i:%02i" , (char)0x1B, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds, );
+    write( vu_lcd, line, strlen(line) );
+    sprintf( line, "%c[1;0HD:%c E:%d O:%d X:%d" , (char)0x1B, disk_thread_has_high_priority?'x':' ', disk_errors, total_overruns, total_xruns );
+    write( vu_lcd, line, strlen(line) );
 }
 #else
 
