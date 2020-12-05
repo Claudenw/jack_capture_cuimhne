@@ -597,8 +597,8 @@ static void print_console_top(void){
 
     fprintf(out, "   |");
     for(lokke=0;lokke<vu_len;lokke++)
-      fputc(out, c);
-    fprintf(out, "|\n")
+      fputc( c, out );
+    fprintf(out, "|\n");
     set_color( out, COLOR_RESET );
     fflush(out);
   }
@@ -609,7 +609,7 @@ static void init_vu(void){
 #ifndef IS_HEADLESS
   int ch;
   for(ch=0;ch<num_channels;ch++)
-    fputc( out, "\n" );
+    fputc( '\n', out );
 #endif
 }
 
@@ -650,10 +650,9 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 
   if(peak>=1.0f){
       vol[vu_len-1]='!';
-  } else {
-      fputs( out, vol );
   }
-  fputc( out, "|" );
+  fputs( vol, out );
+  fputc( '|', out );
 #endif
 }
 
@@ -678,16 +677,12 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
       buffer_string[i]='\0';
     }
     set_color( out, COLOR_GREEN );
-    fprintf(out, "Buffer: %s"
-           "  Time: %02i:%02i "
-           "DHP: [%c]  "
-           "Overruns: %d  "
-           "Xruns: %d",
+    fprintf(out, "Buffer: %s  Time: %02i:%02i DHP: [%c]  Overruns: %d  Xruns: %d",
            buffer_string,
            recorded_minutes, recorded_seconds,
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
-           total_xruns,
+           total_xruns
            );
     set_color( out, COLOR_RESET );
 #endif
@@ -805,7 +800,7 @@ static void *helper_thread_func(void *arg){
 
 #ifndef IS_HEADLESS
   if(show_bufferusage)
-    fputc( out, "\n" );
+    fputc( '\n', out );
 #endif
 
   do{
@@ -815,16 +810,15 @@ static void *helper_thread_func(void *arg){
       if(use_vu || show_bufferusage){
         move_cursor_to_top();
         if(!use_vu){
-          fputc( out, "\n" );
+          fputc( '\n', out );
         }
         printf("%c[%dA",ESC,1); // move up yet another line.
         set_color( out, COLOR_RED );
         { // clear line
           int lokke;
           for(lokke=0;lokke<vu_len+5;lokke++)
-            fputc( out, ' ');
-          fputc( out, "\n" );
-          fprintf( out, "%c[%dA",ESC,1); // move up again
+            fputc( ' ', out );
+          fprintf( out, "\n%c[%dA",ESC,1); // move up again
         }
       }
       fprintf( out, MESSAGE_PREFIX);
@@ -881,7 +875,7 @@ void print_message(const char *fmt, ...){
 
     va_list argp;
     va_start(argp,fmt);
-    fprintf(err,"%c[%im%s", ESC, COLOR_RED, MESSAGE_PREFIX, );
+    fprintf(err,"%c[%im%s", ESC, COLOR_RED, MESSAGE_PREFIX );
     vfprintf(err,fmt,argp);
     set_color( err, COLOR_RESET );
     fflush(err);
@@ -1292,7 +1286,7 @@ static int open_soundfile(void){
 static int mp3_write(void *das_data,size_t frames,bool do_flush);
 #endif
 
-static void (void){
+static void close_soundfile(void){
 
   if(write_to_stdout==false){
     if(soundfile!=NULL)
@@ -2877,6 +2871,9 @@ int main (int argc, char *argv[]){
   g_thread_type = MAIN_THREAD;
 
   char **org_argv = argv;
+
+  out = stdout;
+  err = stderr;
 
   // remove exe name from argument list.
   argv = &argv[1];
