@@ -2210,8 +2210,6 @@ static void start_jack(void){
   if(I_am_already_called) // start_jack is called more than once if the --port argument has been used.
     return;
 
-  vu_lcd = open( vu_device ,O_WRONLY);
-
   client=new_jack_client(jackname);
 
   jack_samplerate=jack_get_sample_rate(client);
@@ -2673,6 +2671,11 @@ char **read_config(int *argc,int max_size){
 }
 
 void init_various(void){
+
+#if __CUIMHNE__
+  vu_lcd = open( vu_device ,O_WRONLY);
+#endif
+
   verbose_print("main() init jack 1\n");
   // Init jack 1
   {

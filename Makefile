@@ -12,7 +12,7 @@ CFLAGS += -I/opt/local/include
 OPTIMIZE=-O3
 #OPTIMIZE=-O0 -g
 
-COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused -D__CUIMHNE__
+COMPILEFLAGS=$(CFLAGS) $(OPTIMIZE) -DVERSION=\"$(VERSION)\" -Wall -Wextra -Wno-unused 
 LINKFLAGS=$(LDFLAGS) -ljack -lsndfile -lm -lpthread -latomic
 
 OS := $(shell uname)
@@ -22,7 +22,7 @@ endif
 
 targets = jack_capture
 
-all: check_dependencies jack_capture
+all: check_dependencies jack_capture jack_capture-i2c
 
 install: $(targets)
 	install -d $(DESTDIR)$(bindir)
@@ -30,6 +30,8 @@ install: $(targets)
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/jack_capture
+	rm -f $(DESTDIR)$(bindir)/jack_capture-i2c
+	rm -f $(DESTDIR)$(bindir)/jack_capture_gui2
 	-rmdir $(DESTDIR)$(bindir)
 
 check_dependencies:
@@ -62,6 +64,8 @@ dist: clean
 jack_capture: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile das_config.h config_flags
 	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
 
+jack_capture-i2c: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile das_config.h config_flags
+	$(CC) $(COMPILEFLAGS) -D__CUIMHNE__ jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
 
 jack_capture_gui2: jack_capture_gui2.cpp
 	$(CPP) $(CPPFLAGS) $(OPTIMIZE) jack_capture_gui2.cpp $(LDFLAGS) `pkg-config --libs --cflags gtk+-2.0` -o jack_capture_gui2
@@ -83,4 +87,4 @@ setformat.c: gen_setformat_c.sh
 
 
 clean:
-	rm -f *~ jack_capture jack_capture_gui2 config_flags *.wav *.flac *.ogg *.mp3 *.au *.aiff *.wavex temp.c* setformat.c* das_config.h* a.out *.gz  *.orig "#*"
+	rm -f *~ jack_capture jack_capture-i2c jack_capture_gui2 config_flags *.wav *.flac *.ogg *.mp3 *.au *.aiff *.wavex temp.c* setformat.c* das_config.h* a.out *.gz  *.orig "#*"
