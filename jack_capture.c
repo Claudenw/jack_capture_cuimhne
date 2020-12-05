@@ -1,4 +1,3 @@
-
 /*
   Kjetil Matheussen, 2005-2013.
 
@@ -89,7 +88,11 @@ void shutdown_osc(void);
 #define OPTARGS_ELSE() }else if(1){
 #define OPTARGS_END }else{fprintf(stderr,"%s",usage);exit(-1);}}}
 
-
+#define ESC 0x1b
+#define COLOR_RESET 0
+#define COLOR_RED 31
+#define COLOR_GREEN 32
+#define COLOR_CYAN 36
 
 /* Arguments and their default values */
 #define DEFAULT_MIN_BUFFER_TIME 4
@@ -581,15 +584,13 @@ static void print_console_top(void){
   if(use_vu){
     int lokke=0;
     char c='"';
-    // Set cyan color
-    printf("%c[36m",0x1b);
+    set_color( COLOR_CYAN );
 
-    //printf("****");
     printf("   |");
     for(lokke=0;lokke<vu_len;lokke++)
       putchar(c);
     printf("|");print_ln();
-    printf("%c[0m",0x1b); // reset colors
+    set_color( COLOR_RESET );
     fflush(stdout);
   }else{
     //print_ln();
@@ -615,7 +616,7 @@ static void init_show_bufferusage(void){
 
 static void move_cursor_to_top(void){
 #ifndef __CUIMHNE__
-  printf("%c[%dA",0x1b,
+  printf("%c[%dA", ESC,
          use_vu&&show_bufferusage
          ? num_channels+1
          : use_vu
@@ -623,18 +624,26 @@ static void move_cursor_to_top(void){
            : show_bufferusage
              ? 1
              : 0);
-  printf("%c[0m",0x1b); // reset colors
+  set_color( RESET_COLOR );
   fflush(stdout);
 #endif
 }
 
 static char *vu_not_recording="Press <Return> to start recording";
 
-static void set_color( int code ){
+static void set_color( int color ){
 #ifndef __CUIMHNE__
-    printf("%c[%im",0x1b, code );
+    set_color( stdout, color );
 #endif
 }
+
+static void set_color( FILE* out, int color )
+{
+#ifndef __CUIMHNE__
+    fprintf(out,"%c[%im", ESC , color);
+#endif
+}
+
 #ifdef __CUIMHNE__
 static void print_framed_meter( int ch, float peak, char* vol ) {
     char line[vu_len+7];
@@ -652,18 +661,15 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 #else
 static void print_framed_meter( int ch, float peak, char* vol ) {
   // Set cyan color
-  set_color(36);
-  printf( "%02i:|", ch)
+  set_color( COLOR_CYAN );
+  printf( "%02i:|", ch);
 
   if(peak>=1.0f){
       vol[vu_len-1]='!';
-      set_color( 31 ); //red
-      puts( vol )
-      set_color( 36 ); // cyan
   } else {
       puts( vol );
   }
-  puts( "|" )
+  puts( "|" );
 
 }
 #endif
@@ -692,21 +698,23 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
       buffer_string[i]='\0';
     }
 
-    printf("%c[32m"
+    printf("%c[%im"
            "Buffer: %s"
            "  Time: %02i:%02i "
            "DHP: [%c]  "
            "Overruns: %d  "
            "Xruns: %d"
-           "%c[0m",
+           "%c[%im",
            //fmaxf(0.0f,buflen-bufleft),buflen,
-           0x1b, // green color
+           ESC,
+           COLOR_GREEN,
            buffer_string,
            recorded_minutes, recorded_seconds,
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            total_xruns,
-           0x1b // reset color
+           ESC,
+           COLOR_RESET
            );
     print_ln();
 }
@@ -792,8 +800,8 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
 
     print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds%60 );
   }else{
-    printf("%c[0m",0x1b); // reset colors
-    fprintf(stderr,"%c[0m",0x1b); // reset colors
+    set_color( COLOR_RESET );
+    set_color( stderr, COLOR_RESET );
   }
   fflush(stdout);
   fflush(stderr);
@@ -837,15 +845,15 @@ static void *helper_thread_func(void *arg){
         if(!use_vu){
           print_ln();
         }
-	printf("%c[%dA",0x1b,1); // move up yet another line.
+	printf("%c[%dA",ESC,1); // move up yet another line.
         msleep(5);
-	printf("%c[31m",0x1b);   // set red color
+	set_color( COLOR_RED );   // set red color
 	{ // clear line
 	  int lokke;
 	  for(lokke=0;lokke<vu_len+5;lokke++)
 	    putchar(' ');
           print_ln();
-	  printf("%c[%dA",0x1b,1); // move up again
+	  printf("%c[%dA",ESC,1); // move up again
           msleep(5);
 	}
       }
@@ -903,9 +911,9 @@ void print_message(const char *fmt, ...){
 
     va_list argp;
     va_start(argp,fmt);
-    fprintf(stderr,"%c[31m" MESSAGE_PREFIX,0x1b);   // set red color
+    fprintf(stderr,"%s%c[%im" MESSAGE_PREFIX, ESC, COLOR_RED);
     vfprintf(stderr,fmt,argp);
-    fprintf(stderr,"%c[0m",0x1b); // reset colors
+    set_color( stderr, COLOR_RESET );
     fflush(stderr);
     va_end(argp);
 
@@ -2184,7 +2192,9 @@ static void finish(int sig){
 
 static void jack_shutdown(void *arg){
   (void)arg;
+#if __CUIMHNE__
   close( vu_lcd );
+#endif
   fprintf(stderr,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
   SEM_SIGNAL(stop_sem);
@@ -2847,9 +2857,9 @@ void stop_recording_and_cleanup(void){
 
   if(silent==false){
     usleep(50); // wait for terminal
-    fprintf(stderr,"%c[31m",0x1b); //red color
+    set_color( stderr, COLOR_RED );
     fprintf(stderr,"Finished.");
-    fprintf(stderr,"%c[0m",0x1b); // reset colors
+    set_color( stderr, COLOR_RESET );
     fprintf(stderr,"\n");
   }
 }
