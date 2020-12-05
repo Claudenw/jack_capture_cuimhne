@@ -579,18 +579,26 @@ static void print_ln(void){
   //msleep(3);
 }
 
+static void set_color( FILE* out, int color )
+{
+#ifndef __CUIMHNE__
+    fprintf(out,"%c[%im", ESC , color);
+#endif
+}
+
+
 static void print_console_top(void){
 #ifndef __CUIMHNE__
   if(use_vu){
     int lokke=0;
     char c='"';
-    set_color( COLOR_CYAN );
+    set_color( stdout, COLOR_CYAN );
 
     printf("   |");
     for(lokke=0;lokke<vu_len;lokke++)
       putchar(c);
     printf("|");print_ln();
-    set_color( COLOR_RESET );
+    set_color( stdout, COLOR_RESET );
     fflush(stdout);
   }else{
     //print_ln();
@@ -613,7 +621,6 @@ static void init_show_bufferusage(void){
 #endif
 }
 
-
 static void move_cursor_to_top(void){
 #ifndef __CUIMHNE__
   printf("%c[%dA", ESC,
@@ -624,25 +631,13 @@ static void move_cursor_to_top(void){
            : show_bufferusage
              ? 1
              : 0);
-  set_color( RESET_COLOR );
+  set_color( stdout, COLOR_RESET );
   fflush(stdout);
 #endif
 }
 
 static char *vu_not_recording="Press <Return> to start recording";
 
-static void set_color( int color ){
-#ifndef __CUIMHNE__
-    set_color( stdout, color );
-#endif
-}
-
-static void set_color( FILE* out, int color )
-{
-#ifndef __CUIMHNE__
-    fprintf(out,"%c[%im", ESC , color);
-#endif
-}
 
 #ifdef __CUIMHNE__
 static void print_framed_meter( int ch, float peak, char* vol ) {
@@ -660,8 +655,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 }
 #else
 static void print_framed_meter( int ch, float peak, char* vol ) {
-  // Set cyan color
-  set_color( COLOR_CYAN );
+  set_color( stdout, COLOR_CYAN );
   printf( "%02i:|", ch);
 
   if(peak>=1.0f){
@@ -756,14 +750,12 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
         vu_peakvals[ch] = val;
       }
 
-
-
       if (timemachine_mode==true && timemachine_recording==false) {
         if (strlen( vu_not_recording )>=vu_len) {
             strncpy( vol, vu_not_recording, vu_len );
             vol[vu_len]=0;
         } else {
-            int diff = vu_len - strlen( vu_not_recording ) / 2;
+            int diff = (vu_len - strlen( vu_not_recording )) / 2;
             for (i=0;i<diff;i++) {
                 vol[i]='-';
                 vol[vu_len-i]='-';
@@ -800,7 +792,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
 
     print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds%60 );
   }else{
-    set_color( COLOR_RESET );
+    set_color( stdout, COLOR_RESET );
     set_color( stderr, COLOR_RESET );
   }
   fflush(stdout);
@@ -847,7 +839,7 @@ static void *helper_thread_func(void *arg){
         }
 	printf("%c[%dA",ESC,1); // move up yet another line.
         msleep(5);
-	set_color( COLOR_RED );   // set red color
+	set_color( stdout, COLOR_RED );
 	{ // clear line
 	  int lokke;
 	  for(lokke=0;lokke<vu_len+5;lokke++)
@@ -911,7 +903,7 @@ void print_message(const char *fmt, ...){
 
     va_list argp;
     va_start(argp,fmt);
-    fprintf(stderr,"%s%c[%im" MESSAGE_PREFIX, ESC, COLOR_RED);
+    fprintf(stderr,"%s%c[%im", MESSAGE_PREFIX, ESC, COLOR_RED);
     vfprintf(stderr,fmt,argp);
     set_color( stderr, COLOR_RESET );
     fflush(stderr);

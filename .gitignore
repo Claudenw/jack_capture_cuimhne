@@ -3,6 +3,8 @@
 config_flags
 das_config.h
 jack_capture
+jack_capture-i2c
+jack_capture_gui2
 setformat.c
 temp.c
 
