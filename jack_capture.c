@@ -66,6 +66,10 @@ void shutdown_osc(void);
 #include "vringbuffer.h"
 
 
+static FILE* out = stdout;
+static FILE* err = stderr;
+
+
 #define JC_MAX(a,b) (((a)>(b))?(a):(b))
 #define JC_MIN(a,b) (((a)<(b))?(a):(b))
 
@@ -73,22 +77,24 @@ void shutdown_osc(void);
 #define ALIGN_UP(value,alignment) (((uintptr_t)value + alignment - 1) & -alignment)
 #define ALIGN_UP_DOUBLE(p) ALIGN_UP(p,sizeof(double)) // Using double because double should always be very large.
 
+// this uses stderr as it is called before out/err are setup
+#define OPTARGS_CHECK_GET(wrong,right) lokke==argc-1?(fprintf(err,"Must supply argument for '%s'\n",argv[lokke]),exit(-4),wrong):right
 
-#define OPTARGS_CHECK_GET(wrong,right) lokke==argc-1?(fprintf(stderr,"Must supply argument for '%s'\n",argv[lokke]),exit(-4),wrong):right
-
-#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=0;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,"%s",usage);exit(0);
+#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=0;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(err,"%s",usage);exit(0);
 #define OPTARG(name,name2) }}else if(!strcmp(name,a)||!strcmp(name2,a)){{
 #define OPTARG_GETINT() OPTARGS_CHECK_GET(0,atoll(argv[++lokke]))
 //int optargs_inttemp;
 //#define OPTARG_GETINT() OPTARGS_CHECK_GET(0,(optargs_inttemp=strtol(argv[++lokke],(char**)NULL,10),errno!=0?(perror("strtol"),0):optargs_inttemp))
 #define OPTARG_GETFLOAT() OPTARGS_CHECK_GET(0.0f,atof(argv[++lokke]))
 #define OPTARG_GETSTRING() OPTARGS_CHECK_GET("",argv[++lokke])
-#define OPTARG_GETBOOL() ({const char *response = OPTARG_GETSTRING(); !strcasecmp(response,"false") ? false : !strcasecmp(response,"true") ? true : (fprintf(stderr,"Argument for '%s' must be \"false\" or \"true\"\n",argv[lokke-1]), exit(-5) , false);})
+#define OPTARG_GETBOOL() ({const char *response = OPTARG_GETSTRING(); !strcasecmp(response,"false") ? false : !strcasecmp(response,"true") ? true : (fprintf(err,"Argument for '%s' must be \"false\" or \"true\"\n",argv[lokke-1]), exit(-5) , false);})
 #define OPTARG_LAST() }}else if(lokke==argc-1 && argv[lokke][0]!='-'){lokke--;{
 #define OPTARGS_ELSE() }else if(1){
-#define OPTARGS_END }else{fprintf(stderr,"%s",usage);exit(-1);}}}
+#define OPTARGS_END }else{fprintf(err,"%s",usage);exit(-1);}}}
 
 #define ESC 0x1b
+// Console colors:
+// http://www.linuxjournal.com/article/8603
 #define COLOR_RESET 0
 #define COLOR_RED 31
 #define COLOR_GREEN 32
@@ -112,16 +118,16 @@ static bool show_bufferusage=true;
 static char *meterbridge_type="vu";
 static char *meterbridge_reference="0";
 
-#ifdef __CUIMHNE__
+#ifdef HAS_LCD
+#define IS_HEADLESS
 #include <fcntl.h>
 #define vu_len 20
 static char* vu_device="/dev/lcd0";
 static int vu_lcd;
 #else
-
-//static const int vu_len=56;
 #define vu_len 65
 #endif
+
 
 static int vu_dB=true;
 static float vu_bias=1.0f;
@@ -253,14 +259,14 @@ static void verbose_print(const char *fmt, ...){
   if(verbose==true){
     va_list argp;
     va_start(argp,fmt);
-    vfprintf(stderr,fmt,argp);
+    vfprintf(err,fmt,argp);
     va_end(argp); } }
 
 static void* my_calloc(size_t size1,size_t size2){
   size_t size = size1*size2;
   void*  ret  = malloc(size);
   if(ret==NULL){
-    fprintf(stderr,"\nOut of memory. Try a smaller buffer.\n");
+    fprintf(err,"\nOut of memory. Try a smaller buffer.\n");
     return NULL; }
   memset(ret,0,size);
   return ret; }
@@ -391,7 +397,7 @@ static void buffers_init(){
                                    buffer_size_in_bytes);
 
   if(vringbuffer==NULL){
-    fprintf(stderr,"Unable to allocate memory for buffers\n");
+    fprintf(err,"Unable to allocate memory for buffers\n");
     exit(-1);
   }
 
@@ -425,7 +431,7 @@ static void portnames_add_defaults(void){
       int num_ports    = findnumports(portnames);
 
       if(num_ports==0){
-        fprintf(stderr,"No physical output ports found in your jack setup. Exiting.\n");
+        fprintf(err,"No physical output ports found in your jack setup. Exiting.\n");
         exit(0);
       }
 
@@ -453,7 +459,7 @@ static void portnames_add_defaults(void){
       num_channels=num_cportnames;
 
   if(num_channels<=0){
-    fprintf(stderr,"No point recording 0 channels. Exiting.\n");
+    fprintf(err,"No point recording 0 channels. Exiting.\n");
     exit(0);
   }
 
@@ -498,10 +504,10 @@ static void portnames_add(char *name){
     }
 
   }else{
-    fprintf(stderr,"\nWarning, no port(s) with name \"%s\".\n",name);
+    fprintf(err,"\nWarning, no port(s) with name \"%s\".\n",name);
     if(cportnames==NULL)
       if(silent==false)
-	fprintf(stderr,"This could lead to using default ports instead.\n");
+	fprintf(err,"This could lead to using default ports instead.\n");
   }
 }
 
@@ -574,55 +580,41 @@ static void msleep(int n){
   usleep(n*1000);
 }
 
-static void print_ln(void){
-  putchar('\n');
-  //msleep(3);
-}
-
 static void set_color( FILE* out, int color )
 {
-#ifndef __CUIMHNE__
+#ifndef IS_HEADLESS
     fprintf(out,"%c[%im", ESC , color);
 #endif
 }
 
 
 static void print_console_top(void){
-#ifndef __CUIMHNE__
+#ifndef IS_HEADLESS
   if(use_vu){
     int lokke=0;
     char c='"';
-    set_color( stdout, COLOR_CYAN );
+    set_color( out, COLOR_CYAN );
 
-    printf("   |");
+    fprintf(out, "   |");
     for(lokke=0;lokke<vu_len;lokke++)
-      putchar(c);
-    printf("|");print_ln();
-    set_color( stdout, COLOR_RESET );
-    fflush(stdout);
-  }else{
-    //print_ln();
+      fputc(out, c);
+    fprintf(out, "|\n")
+    set_color( out, COLOR_RESET );
+    fflush(out);
   }
 #endif
 }
 
 static void init_vu(void){
-#ifndef __CUIMHNE__
-  //int num_channels=4;
+#ifndef IS_HEADLESS
   int ch;
   for(ch=0;ch<num_channels;ch++)
-    print_ln();
-#endif
-}
-
-static void init_show_bufferusage(void){
-#ifndef __CUIMHNE__
-  print_ln();
+    fputc( out, "\n" );
 #endif
 }
 
 static void move_cursor_to_top(void){
-#ifndef __CUIMHNE__
+#ifndef HAS_LCD
   printf("%c[%dA", ESC,
          use_vu&&show_bufferusage
          ? num_channels+1
@@ -631,16 +623,16 @@ static void move_cursor_to_top(void){
            : show_bufferusage
              ? 1
              : 0);
-  set_color( stdout, COLOR_RESET );
-  fflush(stdout);
+  set_color( out, COLOR_RESET );
+  fflush(out);
 #endif
 }
 
 static char *vu_not_recording="Press <Return> to start recording";
 
 
-#ifdef __CUIMHNE__
 static void print_framed_meter( int ch, float peak, char* vol ) {
+#ifdef HAS_LCD
     char line[vu_len+7];
     if (ch <= 1) {
       line[0] = (char)0x1B;
@@ -652,26 +644,23 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
       memcpy( (line+6), vol, vu_len );
       int i = write( vu_lcd, line, vu_len+6 );
     }
-}
 #else
-static void print_framed_meter( int ch, float peak, char* vol ) {
-  set_color( stdout, COLOR_CYAN );
-  printf( "%02i:|", ch);
+  set_color( out, COLOR_CYAN );
+  fprintf( out, "%02i:|", ch);
 
   if(peak>=1.0f){
       vol[vu_len-1]='!';
   } else {
-      puts( vol );
+      fputs( out, vol );
   }
-  puts( "|" );
-
-}
+  fputc( out, "|" );
 #endif
-// Console colors:
-// http://www.linuxjournal.com/article/8603
+}
 
-#ifdef __CUIMHNE__
+
 static void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
+
+#ifdef HAS_LCD
     char line[100];
     sprintf( line, "%c[0;0HB:%4.2f T%02i:%02i" , (char)0x1B, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds );
     write( vu_lcd, line, strlen(line) );
@@ -679,9 +668,6 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
     write( vu_lcd, line, strlen(line) );
 }
 #else
-
-static void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
-
     char buffer_string[1000];
     {
       sprintf(buffer_string,"%.2fs./%.2fs",bufleft,buflen);
@@ -691,29 +677,21 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
         buffer_string[i]=' ';
       buffer_string[i]='\0';
     }
-
-    printf("%c[%im"
-           "Buffer: %s"
+    set_color( out, COLOR_GREEN );
+    fprintf(out, "Buffer: %s"
            "  Time: %02i:%02i "
            "DHP: [%c]  "
            "Overruns: %d  "
-           "Xruns: %d"
-           "%c[%im",
-           //fmaxf(0.0f,buflen-bufleft),buflen,
-           ESC,
-           COLOR_GREEN,
+           "Xruns: %d",
            buffer_string,
            recorded_minutes, recorded_seconds,
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            total_xruns,
-           ESC,
-           COLOR_RESET
            );
-    print_ln();
-}
-
+    set_color( out, COLOR_RESET );
 #endif
+}
 
 static void print_console(bool move_cursor_to_top_doit,bool force_update){
   //int num_channels=4;
@@ -792,11 +770,11 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
 
     print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds%60 );
   }else{
-    set_color( stdout, COLOR_RESET );
-    set_color( stderr, COLOR_RESET );
+    set_color( out, COLOR_RESET );
+    set_color( err, COLOR_RESET );
   }
-  fflush(stdout);
-  fflush(stderr);
+  fflush(out);
+  fflush(err);
 }
 
 
@@ -825,36 +803,36 @@ static void *helper_thread_func(void *arg){
   if(use_vu)
     init_vu();
 
+#ifndef IS_HEADLESS
   if(show_bufferusage)
-    init_show_bufferusage();
+    fputc( out, "\n" );
+#endif
 
   do{
     bool move_cursor_to_top_doit=true;
 
     if(message_string[0]!=0){
       if(use_vu || show_bufferusage){
-	move_cursor_to_top();
+        move_cursor_to_top();
         if(!use_vu){
-          print_ln();
+          fputc( out, "\n" );
         }
-	printf("%c[%dA",ESC,1); // move up yet another line.
-        msleep(5);
-	set_color( stdout, COLOR_RED );
-	{ // clear line
-	  int lokke;
-	  for(lokke=0;lokke<vu_len+5;lokke++)
-	    putchar(' ');
-          print_ln();
-	  printf("%c[%dA",ESC,1); // move up again
-          msleep(5);
-	}
+        printf("%c[%dA",ESC,1); // move up yet another line.
+        set_color( out, COLOR_RED );
+        { // clear line
+          int lokke;
+          for(lokke=0;lokke<vu_len+5;lokke++)
+            fputc( out, ' ');
+          fputc( out, "\n" );
+          fprintf( out, "%c[%dA",ESC,1); // move up again
+        }
       }
-      printf(MESSAGE_PREFIX);
-      printf("%s",message_string);
+      fprintf( out, MESSAGE_PREFIX);
+      fprintf( out, "%s",message_string);
       message_string[0]=0;
       move_cursor_to_top_doit=false;
       if(use_vu || show_bufferusage)
-	print_console_top();
+        print_console_top();
     }
 
     if(use_vu || show_bufferusage)
@@ -865,7 +843,7 @@ static void *helper_thread_func(void *arg){
 
     msleep(1000/20);
 
-  }while(is_helper_running);
+  } while(is_helper_running);
 
 
   if(use_vu || show_bufferusage){
@@ -903,10 +881,10 @@ void print_message(const char *fmt, ...){
 
     va_list argp;
     va_start(argp,fmt);
-    fprintf(stderr,"%s%c[%im", MESSAGE_PREFIX, ESC, COLOR_RED);
-    vfprintf(stderr,fmt,argp);
-    set_color( stderr, COLOR_RESET );
-    fflush(stderr);
+    fprintf(err,"%c[%im%s", ESC, COLOR_RED, MESSAGE_PREFIX, );
+    vfprintf(err,fmt,argp);
+    set_color( err, COLOR_RESET );
+    fflush(err);
     va_end(argp);
 
   }else{
@@ -1025,9 +1003,9 @@ static void wait_child(int sig){
 static void call_hook(const char *cmd, int argc, char **argv){
   /* invoke external command */
   if (verbose==true) {
-    fprintf(stderr, "EXE: %s ", cmd);
-    for (argc=0;argv[argc];++argc) printf("'%s' ", argv[argc]);
-    printf("\n");
+    fprintf(err, "EXE: %s ", cmd);
+    for (argc=0;argv[argc];++argc) fprintf(out, "'%s' ", argv[argc]);
+    fprintf( out, "\n");
   }
 
   pid_t pid=fork();
@@ -1039,11 +1017,11 @@ static void call_hook(const char *cmd, int argc, char **argv){
       /* one day this if(1) could become a global option */
       int fd;
       if((fd = open("/dev/null", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR))==-1){
-	perror("open");
+        perror("open");
       }else{
-	dup2(fd,STDOUT_FILENO);
-	dup2(fd,STDERR_FILENO);
-	close(fd);
+        dup2(fd,STDOUT_FILENO);
+        dup2(fd,STDERR_FILENO);
+        close(fd);
       }
     }
     execvp (cmd, (char *const *) argv);
@@ -1239,10 +1217,10 @@ static int open_soundfile(void){
   {
     int format=getformat(soundfile_format);
     if(format==-1 && num_channels>2){
-      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_multi);
+      fprintf(err,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_multi);
       sf_info.format=MORE_THAN_TWO_CHANNELS_FORMAT;
     }else if(format==-1){
-      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_one_or_two);
+      fprintf(err,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_one_or_two);
       sf_info.format=ONE_OR_TWO_CHANNELS_FORMAT;
     }else
       sf_info.format=format;
@@ -1280,7 +1258,7 @@ static int open_soundfile(void){
   sf_info.format |= subformat;
 
   if(sf_format_check(&sf_info)==0){
-    fprintf (stderr, "\nFileformat not supported by libsndfile. Try other options.\n");
+    fprintf (err, "\nFileformat not supported by libsndfile. Try other options.\n");
     return 0;
   }
 
@@ -1293,7 +1271,7 @@ static int open_soundfile(void){
   //static int ai=0;
   //ai++;
   if(soundfile==NULL){ // || ai==10){
-    fprintf (stderr, "\nCan not open sndfile \"%s\" for output (%s)\n", filename,sf_strerror(NULL));
+    fprintf (err, "\nCan not open sndfile \"%s\" for output (%s)\n", filename,sf_strerror(NULL));
     return 0;
   }
 
@@ -1314,7 +1292,7 @@ static int open_soundfile(void){
 static int mp3_write(void *das_data,size_t frames,bool do_flush);
 #endif
 
-static void close_soundfile(void){
+static void (void){
 
   if(write_to_stdout==false){
     if(soundfile!=NULL)
@@ -1441,7 +1419,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
     while(bytes_to_write > 0){
       int written=write(fd,tobuffer_use,bytes_to_write);
       if(written==-1){
-	fprintf(stderr,"Error writing to stdout.\n");
+	fprintf(err,"Error writing to stdout.\n");
 	break;
       }
       bytes_to_write -= written;
@@ -1626,7 +1604,7 @@ static void cleanup_disk(void){
   close_soundfile();
 
   if(verbose==true)
-    fprintf(stderr,"disk thread finished\n");
+    fprintf(err,"disk thread finished\n");
 }
 
 
@@ -2077,7 +2055,7 @@ static void* connection_thread(void *arg){
 
  done:
   if(verbose==true)
-    fprintf(stderr,"connection thread finished\n");
+    fprintf(err,"connection thread finished\n");
   return NULL;
 }
 
@@ -2184,10 +2162,15 @@ static void finish(int sig){
 
 static void jack_shutdown(void *arg){
   (void)arg;
-#if __CUIMHNE__
+#if HAS_LCD
   close( vu_lcd );
 #endif
-  fprintf(stderr,"jack_capture: JACK shutdown.\n");
+#if IS_HEADLESS
+  fclose( out );
+  fclose( err );
+#endif
+
+  fprintf(err,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
   SEM_SIGNAL(stop_sem);
 }
@@ -2257,9 +2240,9 @@ static void start_keypress_thread(void){
 static const char *advanced_help =
   "jack_capture  [--bitdepth n] [--channels n] [--port port] [filename]\n"
   "              [ -b        n] [ -c        n] [ -p    port]\n"
-#ifdef __CUIMHNE__
+#ifdef HAS_LCD
   "\n"
-  "This version has CuimhneCeoil extension to write to lcd device (see --device option)\n"
+  "This version has LCD extension to write to lcd device (see --device option)\n"
 #endif
   "\n"
   "\n"
@@ -2309,7 +2292,7 @@ static const char *advanced_help =
   "[--disable-meter] or [-dm]        -> Disable console meter.\n"
   "[--hide-buffer-usage] or [-hbu]   -> Disable buffer usage updates in the console.\n"
   "[--disable-console] or [-dc]      -> Disable console updates. Same as \"-dm -hbu\".\n"
-#ifdef __CUIMHNE__
+#ifdef HAS_LCD
   "[--device] or [-dev]              -> Specify the console output device (defaults to /dev/lcd0)\n"
 #endif
   "[--no-stdin] or [-ns]             -> Don't read the console. (i.e pressing return won't stop recording.)\n"
@@ -2470,7 +2453,7 @@ void init_arguments(int argc, char *argv[]){
       OPTARG("--disable-meter","-dm") use_vu=false;
       OPTARG("--hide-buffer-usage","-hbu") show_bufferusage=false;
       OPTARG("--disable-console","-dc") use_vu=false;show_bufferusage=false;
-#ifdef __CUIMHNE__
+#ifdef HAS_LCD
       OPTARG("--device","-dev") vu_device=OPTARG_GETSTRING();
 #endif
       OPTARG("--no-stdin","-ns") no_stdin=true;
@@ -2488,7 +2471,7 @@ void init_arguments(int argc, char *argv[]){
 #if HAVE_LIBLO
         osc_port=atoi(OPTARG_GETSTRING());
 #else
-        fprintf(stderr,"osc not supported. liblo was not installed when compiling jack_capture\n");
+        fprintf(err,"osc not supported. liblo was not installed when compiling jack_capture\n");
         exit(3);
 #endif
       }
@@ -2505,7 +2488,7 @@ void init_arguments(int argc, char *argv[]){
     }OPTARGS_END;
 
   if(use_jack_freewheel==true && use_jack_transport==true){
-    fprintf(stderr,"--jack-transport and --jack-freewheel are mutually exclusive options.\n");
+    fprintf(err,"--jack-transport and --jack-freewheel are mutually exclusive options.\n");
     exit(2);
 	}
 
@@ -2516,7 +2499,7 @@ void init_arguments(int argc, char *argv[]){
     if(min_buffer_time<=0.0f)
       min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
 #else
-    fprintf(stderr,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
+    fprintf(err,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
     exit(2);
 #endif
   }else{
@@ -2541,7 +2524,7 @@ void init_arguments(int argc, char *argv[]){
         if(min_buffer_time<=0.0f || min_buffer_time == DEFAULT_MIN_BUFFER_TIME)
           min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
 #else
-        fprintf(stderr,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
+        fprintf(err,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
         exit(2);
 #endif
       }
@@ -2644,7 +2627,7 @@ char **read_config(int *argc,int max_size){
       continue;
 
     if(*argc>=max_size-3){
-      fprintf(stderr,"Too many arguments in config file.\n");
+      fprintf(err,"Too many arguments in config file.\n");
       exit(-2);
     }
 
@@ -2674,8 +2657,13 @@ char **read_config(int *argc,int max_size){
 
 void init_various(void){
 
-#if __CUIMHNE__
+#if HAS_LCD
   vu_lcd = open( vu_device ,O_WRONLY);
+#endif
+
+#if IS_HEADLESS
+  out = fopen( "jack-capture.out", "w" );
+  err = fopen( "jack-catpure.err", "w" );
 #endif
 
   verbose_print("main() init jack 1\n");
@@ -2740,7 +2728,7 @@ void init_various(void){
     jack_set_freewheel_callback(client,freewheelcallback,NULL);
 
     if (jack_activate(client)) {
-      fprintf (stderr,"\nCan not activate client");
+      fprintf (err,"\nCan not activate client");
       exit(-2);
     }
 
@@ -2849,10 +2837,10 @@ void stop_recording_and_cleanup(void){
 
   if(silent==false){
     usleep(50); // wait for terminal
-    set_color( stderr, COLOR_RED );
-    fprintf(stderr,"Finished.");
-    set_color( stderr, COLOR_RESET );
-    fprintf(stderr,"\n");
+    set_color( err, COLOR_RED );
+    fprintf(err,"Finished.");
+    set_color( err, COLOR_RESET );
+    fprintf(err,"\n");
   }
 }
 
@@ -2862,7 +2850,7 @@ void append_argv(char **v1,const char **v2,int len1,int len2,int max_size){
   int read_pos  = 0;
 
   if(len1+len2>=max_size){
-    fprintf(stderr,"Too many arguments.\n");
+    fprintf(err,"Too many arguments.\n");
     exit(-3);
   }
 
