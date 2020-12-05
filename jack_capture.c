@@ -66,8 +66,8 @@ void shutdown_osc(void);
 #include "vringbuffer.h"
 
 
-static FILE* out = stdout;
-static FILE* err = stderr;
+static FILE* out;
+static FILE* err;
 
 
 #define JC_MAX(a,b) (((a)>(b))?(a):(b))
