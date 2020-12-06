@@ -2156,10 +2156,10 @@ static void finish(int sig){
 
 static void jack_shutdown(void *arg){
   (void)arg;
-#if HAS_LCD
+#ifdef HAS_LCD
   close( vu_lcd );
 #endif
-#if IS_HEADLESS
+#ifdef IS_HEADLESS
   fclose( out );
   fclose( err );
 #endif
@@ -2661,7 +2661,7 @@ void init_various(void){
       fprintf(out,"Writing recording to stdout, standard logging redirected to stderr" );
   }
 
-#if IS_HEADLESS
+#ifdef IS_HEADLESS
   out = fopen( "jack-capture.out", "w" );
   err = fopen( "jack-catpure.err", "w" );
 #endif
