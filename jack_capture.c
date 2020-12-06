@@ -665,7 +665,7 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
     write( vu_lcd, line, strlen(line) );
     sprintf( line, "%c[1;0HD:%c E:%d O:%d X:%d" , (char)0x1B, disk_thread_has_high_priority?'x':' ', disk_errors, total_overruns, total_xruns );
     write( vu_lcd, line, strlen(line) );
-}
+
 #else
     char buffer_string[1000];
     {
