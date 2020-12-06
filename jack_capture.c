@@ -260,7 +260,9 @@ static void verbose_print(const char *fmt, ...){
     va_list argp;
     va_start(argp,fmt);
     vfprintf(err,fmt,argp);
-    va_end(argp); } }
+    va_end(argp);
+  }
+}
 
 static void* my_calloc(size_t size1,size_t size2){
   size_t size = size1*size2;
@@ -820,8 +822,7 @@ static void *helper_thread_func(void *arg){
           fprintf( out, "\n%c[%dA",ESC,1); // move up again
         }
       }
-      fprintf( out, MESSAGE_PREFIX);
-      fprintf( out, "%s",message_string);
+      fprintf( out, "%s%s",MESSAGE_PREFIX, message_string );
       message_string[0]=0;
       move_cursor_to_top_doit=false;
       if(use_vu || show_bufferusage)
@@ -850,7 +851,6 @@ static void *helper_thread_func(void *arg){
 
   return NULL;
 }
-
 
 enum ThreadType{
   UNINITIALIZED_THREAD_TYPE,
@@ -2655,15 +2655,16 @@ void init_various(void){
   vu_lcd = open( vu_device ,O_WRONLY);
 #endif
 
-  if (write_to_stdout)
-  {
-      out = err;
-      fprintf(out,"Writing recording to stdout, standard logging redirected to stderr" );
-  }
 
 #ifdef IS_HEADLESS
   out = fopen( "jack-capture.out", "w" );
-  err = fopen( "jack-catpure.err", "w" );
+  err = fopen( "jack-capture.err", "w" );
+#else
+  if (write_to_stdout)
+  {
+      out = err;
+      print_message(out,"Writing recording to stdout, standard logging redirected to stderr\n" );
+  }
 #endif
 
   verbose_print("main() init jack 1\n");
