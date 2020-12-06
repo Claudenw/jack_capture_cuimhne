@@ -689,7 +689,6 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
 }
 
 static void print_console(bool move_cursor_to_top_doit,bool force_update){
-  //int num_channels=4;
   int ch;
   char vol[vu_len+1];
   vol[vu_len] = 0;
