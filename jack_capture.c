@@ -874,7 +874,8 @@ void print_message(const char *fmt, ...){
 
     va_list argp;
     va_start(argp,fmt);
-    fprintf(err,"%c[%im%s", ESC, COLOR_RED, MESSAGE_PREFIX );
+    set_color( err, COLOR_RED );
+    fprintf(err, MESSAGE_PREFIX );
     vfprintf(err,fmt,argp);
     set_color( err, COLOR_RESET );
     fflush(err);
@@ -2654,6 +2655,12 @@ void init_various(void){
   vu_lcd = open( vu_device ,O_WRONLY);
 #endif
 
+  if (write_to_stdout)
+  {
+      out = err;
+      fprintf(out,"Writing recording to stdout, standard logging redirected to stderr" );
+  }
+
 #if IS_HEADLESS
   out = fopen( "jack-capture.out", "w" );
   err = fopen( "jack-catpure.err", "w" );
@@ -2892,6 +2899,7 @@ int main (int argc, char *argv[]){
     osc_port=-1;
   }
 #endif
+
 
   init_various();
 

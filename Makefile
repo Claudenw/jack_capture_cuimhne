@@ -65,7 +65,7 @@ jack_capture: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile 
 	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
 
 jack_capture-i2c: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile das_config.h config_flags
-	$(CC) $(COMPILEFLAGS) -D__CUIMHNE__ jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture-i2c $(LINKFLAGS) `cat config_flags`
+	$(CC) $(COMPILEFLAGS) -DHAS_LCD jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture-i2c $(LINKFLAGS) `cat config_flags`
 
 jack_capture_gui2: jack_capture_gui2.cpp
 	$(CPP) $(CPPFLAGS) $(OPTIMIZE) jack_capture_gui2.cpp $(LDFLAGS) `pkg-config --libs --cflags gtk+-2.0` -o jack_capture_gui2
