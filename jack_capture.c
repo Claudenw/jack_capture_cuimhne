@@ -609,6 +609,7 @@ static void print_console_top(void){
 
 static void init_vu(void){
 #ifndef IS_HEADLESS
+    verbose_print("init_vu() add channel lines.\n");
   int ch;
   for(ch=0;ch<num_channels;ch++)
     fputc( '\n', out );
@@ -617,6 +618,7 @@ static void init_vu(void){
 
 static void move_cursor_to_top(void){
 #ifndef HAS_LCD
+  verbose_print("move_cursor_to_top()\n");
   printf("%c[%dA", ESC,
          use_vu&&show_bufferusage
          ? num_channels+1
@@ -801,6 +803,7 @@ static void *helper_thread_func(void *arg){
 
 #ifndef IS_HEADLESS
   if(show_bufferusage)
+    verbose_print("helper_thread_func() add usage line.\n");
     fputc( '\n', out );
 #endif
 
@@ -809,6 +812,7 @@ static void *helper_thread_func(void *arg){
 
     if(message_string[0]!=0){
       if(use_vu || show_bufferusage){
+        verbose_print("helper_thread_func() display buffer.\n");
         move_cursor_to_top();
         if(!use_vu){
           fputc( '\n', out );
