@@ -589,46 +589,45 @@ static void set_color( FILE* out, int color )
 #endif
 }
 
-
-static void print_console_top(void){
+static void create_display_frame(void) {
 #ifndef IS_HEADLESS
-  if(use_vu){
-    int lokke=0;
-    char c='"';
-    set_color( out, COLOR_CYAN );
+  if(use_vu||show_bufferusage) {
 
-    fprintf(out, "   |");
-    for(lokke=0;lokke<vu_len;lokke++)
-      fputc( c, out );
-    fprintf(out, "|\n");
-    set_color( out, COLOR_RESET );
+    // print console top
+    int idx=0;
+    set_color( out, COLOR_CYAN );
+    fputs(out, "   |");
+    for(idx=0;idx<vu_len;idx++)
+      fputc( '"', out );
+    fputs(out, "|\n");
+
+    // add channel lines
+    if(use_vu)
+      for(ch=0;ch<num_channels;ch++)
+        fputc( '\n', out );
+
+    // add buffer usage line
+    if(show_bufferusage) {
+      fputc( '\n', out );
+    }
     fflush(out);
   }
 #endif
 }
 
-static void init_vu(void){
-#ifndef IS_HEADLESS
-    verbose_print("init_vu() add channel lines.\n");
-  int ch;
-  for(ch=0;ch<num_channels;ch++)
-    fputc( '\n', out );
-#endif
-}
-
+/*
+ * move the cursor to the top of the display area using VT100 up commands.
+ * and reset the color.
+ */
 static void move_cursor_to_top(void){
 #ifndef HAS_LCD
+  int count = use_vu ? num_channels : 0;
+  count += show_bufferusage ? 1 : 0;
+
   verbose_print("move_cursor_to_top()\n");
-  printf("%c[%dA", ESC,
-         use_vu&&show_bufferusage
-         ? num_channels+1
-         : use_vu
-           ? num_channels
-           : show_bufferusage
-             ? 1
-             : 0);
+
+  printf("%c[%dA", ESC, count );
   set_color( out, COLOR_RESET );
-  fflush(out);
 #endif
 }
 
@@ -636,10 +635,11 @@ static char *vu_not_recording="Press <Return> to start recording";
 
 
 static void print_framed_meter( int ch, float peak, char* vol ) {
+    verbose_print("print_framed_meter() \n");
 #ifdef HAS_LCD
     char line[vu_len+7];
     if (ch <= 1) {
-      line[0] = (char)0x1B;
+      line[0] = (char)ESC;
       line[1] ='[';
       line[2] = '2'+ch;
       line[3] = ';';
@@ -649,6 +649,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
       int i = write( vu_lcd, line, vu_len+6 );
     }
 #else
+
   set_color( out, COLOR_CYAN );
   fprintf( out, "%02i:|", ch);
 
@@ -692,7 +693,10 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
 #endif
 }
 
-static void print_console(bool move_cursor_to_top_doit,bool force_update){
+/**
+ * Prints the vu meter and statistics.  Will print on LCD or screen as appropriate.
+ */
+static void print_console(bool force_update){
   int ch;
   char vol[vu_len+1];
   vol[vu_len] = 0;
@@ -701,8 +705,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
   if(force_update==false && vu_vals[0]==-1.0f)
     return;
 
-  if(move_cursor_to_top_doit)
-    move_cursor_to_top();
+  move_cursor_to_top();
 
   if(use_vu){
 
@@ -794,47 +797,37 @@ static void *helper_thread_func(void *arg){
   (void)arg;
 
   helper_thread_running=1;
+  // create the frame for the general display
+  create_display_frame();
 
-  if(use_vu||show_bufferusage)
-    print_console_top();
+  /* when a message string arrives print it out in red.
+   if the display is headless output will print to file.
+   if the display is not headless the display cursor will
+   be moved to the display border line where the message will be
+   printed and the frame recreated
 
-  if(use_vu)
-    init_vu();
-
-#ifndef IS_HEADLESS
-  if(show_bufferusage)
-    verbose_print("helper_thread_func() add usage line.\n");
-    fputc( '\n', out );
-#endif
-
+  */
   do{
     bool move_cursor_to_top_doit=true;
 
     if(message_string[0]!=0){
+      // there is a message.
+#ifndef HAS_LCD
+      // move up to the header line
       if(use_vu || show_bufferusage){
         verbose_print("helper_thread_func() display buffer.\n");
         move_cursor_to_top();
-        if(!use_vu){
-          fputc( '\n', out );
-        }
-        printf("%c[%dA",ESC,1); // move up yet another line.
+        fprintf( "%c[1A%c[2K",ESC,ESC, out); // move up yet another line and clear the line
         set_color( out, COLOR_RED );
-        { // clear line
-          int lokke;
-          for(lokke=0;lokke<vu_len+5;lokke++)
-            fputc( ' ', out );
-          fprintf( out, "\n%c[%dA",ESC,1); // move up again
-        }
       }
-      fprintf( out, "%s%s",MESSAGE_PREFIX, message_string );
+#endif
+      fprintf( out, "%s%s\n",MESSAGE_PREFIX, message_string );
+      create_display_frame();
       message_string[0]=0;
-      move_cursor_to_top_doit=false;
-      if(use_vu || show_bufferusage)
-        print_console_top();
     }
 
     if(use_vu || show_bufferusage)
-      print_console(move_cursor_to_top_doit,false);
+      print_console(false);
 
     if(init_meterbridge_ports()==1 && use_vu==false && show_bufferusage==false) // Note, init_meterbridge_ports will usually exit at the top of the function, where it tests for ports_meterbridge!=NULL (this stuff needs to be handled better)
       break;
@@ -845,7 +838,7 @@ static void *helper_thread_func(void *arg){
 
 
   if(use_vu || show_bufferusage){
-    print_console(true,true);
+    print_console(true);
   }
 
   message_string[0]     = 0;
@@ -867,6 +860,7 @@ static __thread enum ThreadType g_thread_type = UNINITIALIZED_THREAD_TYPE;
 
 
 static pthread_mutex_t print_message_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void print_message(const char *fmt, ...){
   if (absolutely_silent==true) return;
 
@@ -875,6 +869,7 @@ void print_message(const char *fmt, ...){
     return;
 
   if(helper_thread_running==0 || write_to_stdout==true){
+    verbose_print("print_message() writing message directly\n");
 
     va_list argp;
     va_start(argp,fmt);
@@ -886,8 +881,10 @@ void print_message(const char *fmt, ...){
     va_end(argp);
 
   }else{
+    verbose_print("print_message() writing message via helper thread\n");
 
-    pthread_mutex_lock(&print_message_mutex);{
+    pthread_mutex_lock(&print_message_mutex);
+    {
 
       while(message_string[0]!=0)
         msleep(2);
@@ -899,8 +896,8 @@ void print_message(const char *fmt, ...){
 
       while(message_string[0]!=0)
         msleep(2);
-
-    }pthread_mutex_unlock(&print_message_mutex);
+    }
+    pthread_mutex_unlock(&print_message_mutex);
   }
 
 }
