@@ -2652,11 +2652,6 @@ char **read_config(int *argc,int max_size){
 
 void init_various(void){
 
-#if HAS_LCD
-  vu_lcd = open( vu_device ,O_WRONLY);
-#endif
-
-
 #ifdef IS_HEADLESS
   out = fopen( "jack-capture.out", "w" );
   err = fopen( "jack-capture.err", "w" );
@@ -2666,6 +2661,12 @@ void init_various(void){
       out = err;
       print_message( "Writing recording to stdout, standard logging redirected to stderr\n" );
   }
+#endif
+
+#if HAS_LCD
+  print_message( "Using LCD" );
+  print_message( vu_device );
+  vu_lcd = open( vu_device ,O_WRONLY);
 #endif
 
   verbose_print("main() init jack 1\n");
