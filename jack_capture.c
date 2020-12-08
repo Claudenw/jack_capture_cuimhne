@@ -654,7 +654,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
       vol[vu_len-1]='!';
   }
   fputs( vol, out );
-  fputc( '|', out );
+  fputs( '|\n', out );
 #endif
 }
 
