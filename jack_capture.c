@@ -682,7 +682,7 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
       buffer_string[i]='\0';
     }
     set_color( out, COLOR_GREEN );
-    fprintf(out, "Buffer: %s  Time: %02i:%02i DHP: [%c]  Overruns: %d  Xruns: %d",
+    fprintf(out, "Buffer: %s  Time: %02i:%02i DHP: [%c]  Overruns: %d  Xruns: %d\n",
            buffer_string,
            recorded_minutes, recorded_seconds,
            disk_thread_has_high_priority?'x':' ',
