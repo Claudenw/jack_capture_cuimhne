@@ -596,14 +596,14 @@ static void create_display_frame(void) {
     // print console top
     int idx=0;
     set_color( out, COLOR_CYAN );
-    fputs(out, "   |");
+    fputs( "   |", out);
     for(idx=0;idx<vu_len;idx++)
       fputc( '"', out );
-    fputs(out, "|\n");
+    fputs( "|\n", out);
 
     // add channel lines
     if(use_vu)
-      for(ch=0;ch<num_channels;ch++)
+      for(idx=0;idx<num_channels;idx++)
         fputc( '\n', out );
 
     // add buffer usage line
@@ -657,7 +657,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
       vol[vu_len-1]='!';
   }
   fputs( vol, out );
-  fputs( '|\n', out );
+  fputs( "|\n", out );
 #endif
 }
 
@@ -817,7 +817,7 @@ static void *helper_thread_func(void *arg){
       if(use_vu || show_bufferusage){
         verbose_print("helper_thread_func() display buffer.\n");
         move_cursor_to_top();
-        fprintf( "%c[1A%c[2K",ESC,ESC, out); // move up yet another line and clear the line
+        fprintf( out, "%c[1A%c[2K",ESC,ESC); // move up yet another line and clear the line
         set_color( out, COLOR_RED );
       }
 #endif
@@ -2664,7 +2664,7 @@ void init_various(void){
   if (write_to_stdout)
   {
       out = err;
-      print_message(out,"Writing recording to stdout, standard logging redirected to stderr\n" );
+      print_message( "Writing recording to stdout, standard logging redirected to stderr\n" );
   }
 #endif
 
