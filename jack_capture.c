@@ -620,7 +620,7 @@ static void move_cursor_to_top(void){
   // there is an extra 1 here because the display ends up just beyond the last line
   count += show_bufferusage ? 2 : 1;
   verbose_print("move_cursor_to_top(): up %d lines\n", count);
-  printf("%c[%dA", ESC, count );
+  fprintf(stderr, "%c[%dA", ESC, count );
 #endif
 }
 
