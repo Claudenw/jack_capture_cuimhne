@@ -618,11 +618,8 @@ static void move_cursor_to_top(void){
 #ifndef HAS_LCD
   int count = use_vu ? num_channels : 0;
   count += show_bufferusage ? 1 : 0;
-
-  verbose_print("move_cursor_to_top()\n");
-
+  verbose_print("move_cursor_to_top(): up %d lines\n", count);
   printf("%c[%dA", ESC, count );
-  set_color( stderr, COLOR_RESET );
 #endif
 }
 
