@@ -627,9 +627,10 @@ static char *vu_not_recording="Press <Return> to start recording";
 
 
 static void print_framed_meter( int ch, float peak, char* vol ) {
-    verbose_print("print_framed_meter() \n");
+    verbose_print("print_framed_meter( %c, %f, \"%s\") \n", ch, peak, vol);
 #ifdef HAS_LCD
-    char line[vu_len+7];
+    char line[vu_len+8];
+    line[7] = 0;
     if (ch <= 1) {
       line[0] = (char)ESC;
       line[1] ='[';
@@ -638,6 +639,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
       line[4] = '0';
       line[5] = 'H';
       memcpy( (line+6), vol, vu_len );
+      verbose_print( "%s\n", line );
       int i = write( vu_lcd, line, vu_len+6 );
     }
 #else
@@ -654,8 +656,8 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
 }
 
 
-static void print_usage(int num_bufleft, int num_buffers, float buflen,float bufleft, int recorded_minutes, int recorded_seconds) {
-
+static void print_usage(int num_bufleft, int num_buffers, float buflen, float bufleft, int recorded_minutes, int recorded_seconds) {
+    verbose_print("print_usage( %i, %i, %f, %f, %i, %i) \n", num_bufleft, num_buffers, buflen, bufleft,  recorded_minutes,  recorded_seconds);
 #ifdef HAS_LCD
     char line[100];
     sprintf( line, "%c[0;0HB:%4.2f T%02i:%02i%c[K" , (char)ESC, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds, (char)ESC );
@@ -2640,10 +2642,9 @@ char **read_config(int *argc,int max_size){
 void init_various(void){
 
 #if HAS_LCD
-  print_message( "Using LCD" );
-  print_message( vu_device );
-  print_message( "\n" );
+  print_message( "Using LCD %s\n", vu_device );
   vu_lcd = open( vu_device, O_WRONLY);
+  print_message( "LCD %s opened as %d\n", vu_device, vu_lcd );
 #endif
 
   verbose_print("main() init jack 1\n");
