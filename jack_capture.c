@@ -65,11 +65,6 @@ void shutdown_osc(void);
 
 #include "vringbuffer.h"
 
-
-static FILE* out;
-static FILE* err;
-
-
 #define JC_MAX(a,b) (((a)>(b))?(a):(b))
 #define JC_MIN(a,b) (((a)<(b))?(a):(b))
 
@@ -78,19 +73,19 @@ static FILE* err;
 #define ALIGN_UP_DOUBLE(p) ALIGN_UP(p,sizeof(double)) // Using double because double should always be very large.
 
 // this uses stderr as it is called before out/err are setup
-#define OPTARGS_CHECK_GET(wrong,right) lokke==argc-1?(fprintf(err,"Must supply argument for '%s'\n",argv[lokke]),exit(-4),wrong):right
+#define OPTARGS_CHECK_GET(wrong,right) lokke==argc-1?(fprintf(stderr,"Must supply argument for '%s'\n",argv[lokke]),exit(-4),wrong):right
 
-#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=0;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(err,"%s",usage);exit(0);
+#define OPTARGS_BEGIN(das_usage) {int lokke;const char *usage=das_usage;for(lokke=0;lokke<argc;lokke++){char *a=argv[lokke];if(!strcmp("--help",a)||!strcmp("-h",a)){fprintf(stderr,"%s",usage);exit(0);
 #define OPTARG(name,name2) }}else if(!strcmp(name,a)||!strcmp(name2,a)){{
 #define OPTARG_GETINT() OPTARGS_CHECK_GET(0,atoll(argv[++lokke]))
 //int optargs_inttemp;
 //#define OPTARG_GETINT() OPTARGS_CHECK_GET(0,(optargs_inttemp=strtol(argv[++lokke],(char**)NULL,10),errno!=0?(perror("strtol"),0):optargs_inttemp))
 #define OPTARG_GETFLOAT() OPTARGS_CHECK_GET(0.0f,atof(argv[++lokke]))
 #define OPTARG_GETSTRING() OPTARGS_CHECK_GET("",argv[++lokke])
-#define OPTARG_GETBOOL() ({const char *response = OPTARG_GETSTRING(); !strcasecmp(response,"false") ? false : !strcasecmp(response,"true") ? true : (fprintf(err,"Argument for '%s' must be \"false\" or \"true\"\n",argv[lokke-1]), exit(-5) , false);})
+#define OPTARG_GETBOOL() ({const char *response = OPTARG_GETSTRING(); !strcasecmp(response,"false") ? false : !strcasecmp(response,"true") ? true : (fprintf(stderr,"Argument for '%s' must be \"false\" or \"true\"\n",argv[lokke-1]), exit(-5) , false);})
 #define OPTARG_LAST() }}else if(lokke==argc-1 && argv[lokke][0]!='-'){lokke--;{
 #define OPTARGS_ELSE() }else if(1){
-#define OPTARGS_END }else{fprintf(err,"%s",usage);exit(-1);}}}
+#define OPTARGS_END }else{fprintf(stderr,"%s",usage);exit(-1);}}}
 
 #define ESC 0x1b
 // Console colors:
@@ -259,7 +254,7 @@ static void verbose_print(const char *fmt, ...){
   if(verbose==true){
     va_list argp;
     va_start(argp,fmt);
-    vfprintf(err,fmt,argp);
+    vfprintf(stderr,fmt,argp);
     va_end(argp);
   }
 }
@@ -268,7 +263,7 @@ static void* my_calloc(size_t size1,size_t size2){
   size_t size = size1*size2;
   void*  ret  = malloc(size);
   if(ret==NULL){
-    fprintf(err,"\nOut of memory. Try a smaller buffer.\n");
+    fprintf(stderr,"\nOut of memory. Try a smaller buffer.\n");
     return NULL; }
   memset(ret,0,size);
   return ret; }
@@ -399,7 +394,7 @@ static void buffers_init(){
                                    buffer_size_in_bytes);
 
   if(vringbuffer==NULL){
-    fprintf(err,"Unable to allocate memory for buffers\n");
+    fprintf(stderr,"Unable to allocate memory for buffers\n");
     exit(-1);
   }
 
@@ -433,7 +428,7 @@ static void portnames_add_defaults(void){
       int num_ports    = findnumports(portnames);
 
       if(num_ports==0){
-        fprintf(err,"No physical output ports found in your jack setup. Exiting.\n");
+        fprintf(stderr,"No physical output ports found in your jack setup. Exiting.\n");
         exit(0);
       }
 
@@ -461,7 +456,7 @@ static void portnames_add_defaults(void){
       num_channels=num_cportnames;
 
   if(num_channels<=0){
-    fprintf(err,"No point recording 0 channels. Exiting.\n");
+    fprintf(stderr,"No point recording 0 channels. Exiting.\n");
     exit(0);
   }
 
@@ -506,10 +501,10 @@ static void portnames_add(char *name){
     }
 
   }else{
-    fprintf(err,"\nWarning, no port(s) with name \"%s\".\n",name);
+    fprintf(stderr,"\nWarning, no port(s) with name \"%s\".\n",name);
     if(cportnames==NULL)
       if(silent==false)
-	fprintf(err,"This could lead to using default ports instead.\n");
+	fprintf(stderr,"This could lead to using default ports instead.\n");
   }
 }
 
@@ -585,7 +580,7 @@ static void msleep(int n){
 static void set_color( FILE* out, int color )
 {
 #ifndef IS_HEADLESS
-    fprintf(out,"%c[%im", ESC , color);
+    fprintf(stderr,"%c[%im", ESC , color);
 #endif
 }
 
@@ -595,22 +590,22 @@ static void create_display_frame(void) {
 
     // print console top
     int idx=0;
-    set_color( out, COLOR_CYAN );
-    fputs( "   |", out);
+    set_color( stderr, COLOR_CYAN );
+    fputs( "   |", stderr);
     for(idx=0;idx<vu_len;idx++)
-      fputc( '"', out );
-    fputs( "|\n", out);
+      fputc( '"', stderr );
+    fputs( "|\n", stderr);
 
     // add channel lines
     if(use_vu)
       for(idx=0;idx<num_channels;idx++)
-        fputc( '\n', out );
+        fputc( '\n', stderr );
 
     // add buffer usage line
     if(show_bufferusage) {
-      fputc( '\n', out );
+      fputc( '\n', stderr );
     }
-    fflush(out);
+    fflush(stderr);
   }
 #endif
 }
@@ -627,7 +622,7 @@ static void move_cursor_to_top(void){
   verbose_print("move_cursor_to_top()\n");
 
   printf("%c[%dA", ESC, count );
-  set_color( out, COLOR_RESET );
+  set_color( stderr, COLOR_RESET );
 #endif
 }
 
@@ -650,14 +645,14 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
     }
 #else
 
-  set_color( out, COLOR_CYAN );
-  fprintf( out, "%02i:|", ch);
+  set_color( stderr, COLOR_CYAN );
+  fprintf( stderr, "%02i:|", ch);
 
   if(peak>=1.0f){
       vol[vu_len-1]='!';
   }
-  fputs( vol, out );
-  fputs( "|\n", out );
+  fputs( vol, stderr );
+  fputs( "|\n", stderr );
 #endif
 }
 
@@ -681,15 +676,15 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen,float buf
         buffer_string[i]=' ';
       buffer_string[i]='\0';
     }
-    set_color( out, COLOR_GREEN );
-    fprintf(out, "Buffer: %s  Time: %02i:%02i DHP: [%c]  Overruns: %d  Xruns: %d\n",
+    set_color( stderr, COLOR_GREEN );
+    fprintf(stderr, "Buffer: %s  Time: %02i:%02i DHP: [%c]  Overruns: %d  Xruns: %d\n",
            buffer_string,
            recorded_minutes, recorded_seconds,
            disk_thread_has_high_priority?'x':' ',
            total_overruns,
            total_xruns
            );
-    set_color( out, COLOR_RESET );
+    set_color( stderr, COLOR_RESET );
 #endif
 }
 
@@ -771,11 +766,9 @@ static void print_console(bool force_update){
 
     print_usage( num_bufleft, num_buffers, buflen, bufleft, recorded_minutes, recorded_seconds%60 );
   }else{
-    set_color( out, COLOR_RESET );
-    set_color( err, COLOR_RESET );
+    set_color( stderr, COLOR_RESET );
   }
-  fflush(out);
-  fflush(err);
+  fflush(stderr);
 }
 
 
@@ -817,11 +810,11 @@ static void *helper_thread_func(void *arg){
       if(use_vu || show_bufferusage){
         verbose_print("helper_thread_func() display buffer.\n");
         move_cursor_to_top();
-        fprintf( out, "%c[1A%c[2K",ESC,ESC); // move up yet another line and clear the line
-        set_color( out, COLOR_RED );
+        fprintf( stderr, "%c[1A%c[2K",ESC,ESC); // move up yet another line and clear the line
+        set_color( stderr, COLOR_RED );
       }
 #endif
-      fprintf( out, "%s%s\n",MESSAGE_PREFIX, message_string );
+      fprintf( stderr, "%s%s\n",MESSAGE_PREFIX, message_string );
       create_display_frame();
       message_string[0]=0;
     }
@@ -873,11 +866,11 @@ void print_message(const char *fmt, ...){
 
     va_list argp;
     va_start(argp,fmt);
-    set_color( err, COLOR_RED );
-    fprintf(err, MESSAGE_PREFIX );
-    vfprintf(err,fmt,argp);
-    set_color( err, COLOR_RESET );
-    fflush(err);
+    set_color( stderr, COLOR_RED );
+    fprintf(stderr, MESSAGE_PREFIX );
+    vfprintf(stderr,fmt,argp);
+    set_color( stderr, COLOR_RESET );
+    fflush(stderr);
     va_end(argp);
 
   }else{
@@ -998,9 +991,9 @@ static void wait_child(int sig){
 static void call_hook(const char *cmd, int argc, char **argv){
   /* invoke external command */
   if (verbose==true) {
-    fprintf(err, "EXE: %s ", cmd);
-    for (argc=0;argv[argc];++argc) fprintf(out, "'%s' ", argv[argc]);
-    fprintf( out, "\n");
+    fprintf(stderr, "EXE: %s ", cmd);
+    for (argc=0;argv[argc];++argc) fprintf(stderr, "'%s' ", argv[argc]);
+    fprintf( stderr, "\n");
   }
 
   pid_t pid=fork();
@@ -1212,10 +1205,10 @@ static int open_soundfile(void){
   {
     int format=getformat(soundfile_format);
     if(format==-1 && num_channels>2){
-      fprintf(err,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_multi);
+      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_multi);
       sf_info.format=MORE_THAN_TWO_CHANNELS_FORMAT;
     }else if(format==-1){
-      fprintf(err,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_one_or_two);
+      fprintf(stderr,"Warning, the format \"%s\" is not supported. Using \"%s\" instead.\n", soundfile_format, soundfile_format_one_or_two);
       sf_info.format=ONE_OR_TWO_CHANNELS_FORMAT;
     }else
       sf_info.format=format;
@@ -1253,7 +1246,7 @@ static int open_soundfile(void){
   sf_info.format |= subformat;
 
   if(sf_format_check(&sf_info)==0){
-    fprintf (err, "\nFileformat not supported by libsndfile. Try other options.\n");
+    fprintf (stderr, "\nFileformat not supported by libsndfile. Try other options.\n");
     return 0;
   }
 
@@ -1266,7 +1259,7 @@ static int open_soundfile(void){
   //static int ai=0;
   //ai++;
   if(soundfile==NULL){ // || ai==10){
-    fprintf (err, "\nCan not open sndfile \"%s\" for output (%s)\n", filename,sf_strerror(NULL));
+    fprintf (stderr, "\nCan not open sndfile \"%s\" for output (%s)\n", filename,sf_strerror(NULL));
     return 0;
   }
 
@@ -1414,7 +1407,7 @@ static int stdout_write(sample_t *buffer,size_t frames){
     while(bytes_to_write > 0){
       int written=write(fd,tobuffer_use,bytes_to_write);
       if(written==-1){
-	fprintf(err,"Error writing to stdout.\n");
+	fprintf(stderr,"Error writing to stdout.\n");
 	break;
       }
       bytes_to_write -= written;
@@ -1599,7 +1592,7 @@ static void cleanup_disk(void){
   close_soundfile();
 
   if(verbose==true)
-    fprintf(err,"disk thread finished\n");
+    fprintf(stderr,"disk thread finished\n");
 }
 
 
@@ -2050,7 +2043,7 @@ static void* connection_thread(void *arg){
 
  done:
   if(verbose==true)
-    fprintf(err,"connection thread finished\n");
+    fprintf(stderr,"connection thread finished\n");
   return NULL;
 }
 
@@ -2160,12 +2153,9 @@ static void jack_shutdown(void *arg){
 #ifdef HAS_LCD
   close( vu_lcd );
 #endif
-#ifdef IS_HEADLESS
-  fclose( out );
-  fclose( err );
-#endif
 
-  fprintf(err,"jack_capture: JACK shutdown.\n");
+
+  fprintf(stderr,"jack_capture: JACK shutdown.\n");
   jack_has_been_shut_down=true;
   SEM_SIGNAL(stop_sem);
 }
@@ -2466,7 +2456,7 @@ void init_arguments(int argc, char *argv[]){
 #if HAVE_LIBLO
         osc_port=atoi(OPTARG_GETSTRING());
 #else
-        fprintf(err,"osc not supported. liblo was not installed when compiling jack_capture\n");
+        fprintf(stderr,"osc not supported. liblo was not installed when compiling jack_capture\n");
         exit(3);
 #endif
       }
@@ -2483,7 +2473,7 @@ void init_arguments(int argc, char *argv[]){
     }OPTARGS_END;
 
   if(use_jack_freewheel==true && use_jack_transport==true){
-    fprintf(err,"--jack-transport and --jack-freewheel are mutually exclusive options.\n");
+    fprintf(stderr,"--jack-transport and --jack-freewheel are mutually exclusive options.\n");
     exit(2);
 	}
 
@@ -2494,7 +2484,7 @@ void init_arguments(int argc, char *argv[]){
     if(min_buffer_time<=0.0f)
       min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
 #else
-    fprintf(err,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
+    fprintf(stderr,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
     exit(2);
 #endif
   }else{
@@ -2519,7 +2509,7 @@ void init_arguments(int argc, char *argv[]){
         if(min_buffer_time<=0.0f || min_buffer_time == DEFAULT_MIN_BUFFER_TIME)
           min_buffer_time = DEFAULT_MIN_MP3_BUFFER_TIME;
 #else
-        fprintf(err,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
+        fprintf(stderr,"mp3 not supported. liblame was not installed when compiling jack_capture\n");
         exit(2);
 #endif
       }
@@ -2622,7 +2612,7 @@ char **read_config(int *argc,int max_size){
       continue;
 
     if(*argc>=max_size-3){
-      fprintf(err,"Too many arguments in config file.\n");
+      fprintf(stderr,"Too many arguments in config file.\n");
       exit(-2);
     }
 
@@ -2652,21 +2642,11 @@ char **read_config(int *argc,int max_size){
 
 void init_various(void){
 
-#ifdef IS_HEADLESS
-  out = fopen( "jack-capture.out", "w" );
-  err = fopen( "jack-capture.err", "w" );
-#else
-  if (write_to_stdout)
-  {
-      out = err;
-      print_message( "Writing recording to stdout, standard logging redirected to stderr\n" );
-  }
-#endif
-
 #if HAS_LCD
   print_message( "Using LCD" );
   print_message( vu_device );
-  vu_lcd = open( vu_device ,O_WRONLY);
+  print_message( "\n" );
+  vu_lcd = open( vu_device, O_WRONLY);
 #endif
 
   verbose_print("main() init jack 1\n");
@@ -2731,7 +2711,7 @@ void init_various(void){
     jack_set_freewheel_callback(client,freewheelcallback,NULL);
 
     if (jack_activate(client)) {
-      fprintf (err,"\nCan not activate client");
+      fprintf (stderr,"\nCan not activate client");
       exit(-2);
     }
 
@@ -2840,10 +2820,10 @@ void stop_recording_and_cleanup(void){
 
   if(silent==false){
     usleep(50); // wait for terminal
-    set_color( err, COLOR_RED );
-    fprintf(err,"Finished.");
-    set_color( err, COLOR_RESET );
-    fprintf(err,"\n");
+    set_color( stderr, COLOR_RED );
+    fprintf(stderr,"Finished.");
+    set_color( stderr, COLOR_RESET );
+    fprintf(stderr,"\n");
   }
 }
 
@@ -2853,7 +2833,7 @@ void append_argv(char **v1,const char **v2,int len1,int len2,int max_size){
   int read_pos  = 0;
 
   if(len1+len2>=max_size){
-    fprintf(err,"Too many arguments.\n");
+    fprintf(stderr,"Too many arguments.\n");
     exit(-3);
   }
 
@@ -2880,9 +2860,6 @@ int main (int argc, char *argv[]){
   g_thread_type = MAIN_THREAD;
 
   char **org_argv = argv;
-
-  out = stdout;
-  err = stderr;
 
   // remove exe name from argument list.
   argv = &argv[1];
