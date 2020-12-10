@@ -627,7 +627,7 @@ static char *vu_not_recording="Press <Return> to start recording";
 
 
 static void print_framed_meter( int ch, float peak, char* vol ) {
-    verbose_print("print_framed_meter( %c, %f, \"%s\") \n", ch, peak, vol);
+    verbose_print("print_framed_meter( %i, %f, \"%s\") \n", ch, peak, vol);
 #ifdef HAS_LCD
     char line[vu_len+8];
     line[7] = 0;
