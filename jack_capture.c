@@ -634,7 +634,7 @@ static void print_framed_meter( int ch, float peak, char* vol ) {
     if (ch <= 1) {
       line[0] = (char)ESC;
       line[1] ='[';
-      line[2] = '2'+ch;
+      line[2] = '3'+ch;
       line[3] = ';';
       line[4] = '0';
       line[5] = 'H';
@@ -660,9 +660,9 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen, float bu
     verbose_print("print_usage( %i, %i, %f, %f, %i, %i) \n", num_bufleft, num_buffers, buflen, bufleft,  recorded_minutes,  recorded_seconds);
 #ifdef HAS_LCD
     char line[100];
-    sprintf( line, "%c[0;0HB:%4.2f T%02i:%02i%c[K" , (char)ESC, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds, (char)ESC );
+    sprintf( line, "%c[1;0HB:%4.2f T%02i:%02i%c[K" , (char)ESC, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds, (char)ESC );
     write( vu_lcd, line, strlen(line) );
-    sprintf( line, "%c[1;0HD:%c E:%d O:%d X:%d%c[K" , (char)ESC, disk_thread_has_high_priority?'x':' ', disk_errors, total_overruns, total_xruns, (char)ESC );
+    sprintf( line, "%c[2;0HD:%c E:%d O:%d X:%d%c[K" , (char)ESC, disk_thread_has_high_priority?'x':' ', disk_errors, total_overruns, total_xruns, (char)ESC );
     write( vu_lcd, line, strlen(line) );
 
 #else
