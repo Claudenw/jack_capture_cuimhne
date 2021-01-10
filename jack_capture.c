@@ -665,9 +665,7 @@ static void print_usage(int num_bufleft, int num_buffers, float buflen, float bu
     verbose_print("print_usage( %i, %i, %f, %f, %i, %i) \n", num_bufleft, num_buffers, buflen, bufleft,  recorded_minutes,  recorded_seconds);
 #ifdef HAS_LCD
     char line[100];
-    sprintf( line, "%c[1;0HB:%4.2f T%02i:%02i%c[K" , (char)ESC, (buflen-bufleft)/buflen, recorded_minutes, recorded_seconds, (char)ESC );
-    write( vu_lcd, line, strlen(line) );
-    sprintf( line, "%c[2;0HD:%c E:%d O:%d X:%d%c[K" , (char)ESC, disk_thread_has_high_priority?'x':' ', disk_errors, total_overruns, total_xruns, (char)ESC );
+    sprintf( line, "%c[2;0HE:%d O:%d X:%d T%02i:%02i%c[K" , (char)ESC, disk_errors, total_overruns, total_xruns, recorded_minutes, recorded_seconds, (char)ESC );
     write( vu_lcd, line, strlen(line) );
 
 #else
