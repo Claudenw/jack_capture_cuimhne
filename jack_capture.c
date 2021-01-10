@@ -610,10 +610,7 @@ static void create_display_frame(void) {
 #else
   if (num_channels < 2) {
       // clear the last line to make the display clean
-      char line=" [4;0H [2K";
-      line[0] = (char)ESC;
-      line[6] = (char)ESC;
-      write( vu_lcd, line, 10 );
+      write( vu_lcd, "\x1b[4;0H\x1b[2K", 10 );
   }
 #endif
 }
