@@ -607,6 +607,14 @@ static void create_display_frame(void) {
     }
     fflush(stderr);
   }
+#else
+  if (num_channels < 2) {
+      // clear the last line to make the display clean
+      char line=" [4;0H [2K";
+      line[0] = (char)ESC;
+      line[6] = (char)ESC;
+      write( vu_lcd, line, 10 );
+  }
 #endif
 }
 
@@ -800,8 +808,6 @@ static void *helper_thread_func(void *arg){
 
   */
   do{
-    bool move_cursor_to_top_doit=true;
-
     if(message_string[0]!=0){
       // there is a message.
 #ifndef HAS_LCD
