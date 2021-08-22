@@ -240,7 +240,7 @@ int main (int argc, char* argv[])
                 }
 
                 if (jack_set_property (client, uuid, key, value, type)) {
-                        fprintf (stderr, "cannot set value for key %s of %s\n", value, subject);
+                        fprintf (stderr, "cannot set value %s for key (type:'%s') %s of %s (uuid:%ld)\n", value, key, type, subject, uuid);
                         exit (1);
                 }
                 
