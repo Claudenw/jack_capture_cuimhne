@@ -2705,6 +2705,7 @@ void init_various(void){
   verbose_print("main() Init jack 2.\n");
   // Init jack 2
   {
+      init_metadata(client);
     jack_set_process_callback(client, process, NULL);
     jack_set_xrun_callback(client, xrun, NULL);
 
