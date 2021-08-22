@@ -267,7 +267,7 @@ int main (int argc, char* argv[])
                         /* list all properties for a given UUID */
 
                         jack_description_t description;
-                        size_t cnt, n;
+                        int cnt, n;
 
                         if (get_subject (client, argv, &optind)) {
                                 return -1;
@@ -298,9 +298,9 @@ int main (int argc, char* argv[])
                         /* list all properties */
 
                         jack_description_t* description;
-                        size_t cnt;
+                        int cnt;
                         size_t p;
-                        size_t n;
+                        int n;
                         char buf[JACK_UUID_STRING_SIZE];
 
                         if ((cnt = jack_get_all_properties (&description)) < 0) {
@@ -312,7 +312,7 @@ int main (int argc, char* argv[])
                         for (n = 0; n < cnt; ++n) {
 
                                 jack_uuid_unparse (description[n].subject, buf);
-                                printf ("subject: (%d) '%s' with %d properties\n", description[n].subject, buf, description[n].property_cnt);
+                                printf ("subject: (%ld) '%s' with %d properties\n", description[n].subject, buf, description[n].property_cnt);
                                 for (p = 0; p < description[n].property_cnt; ++p) {
                                         if (description[n].properties[p].type) {
                                                 printf ("key: %s value: %s type: %s\n", 
