@@ -396,17 +396,6 @@ static void buffers_init(){
 /////////////////////// METADATA ////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
-static metadata_t metadata;
-
-char* copy_malloc( const char* s ) {
-    return strcpy ((char *) malloc (sizeof (char) * (strlen(s)+1)), s);
-}
-
-void free_copy( char * s ) {
-    if ( s ) {
-        free( s );
-    }
-}
 
 int set_metadata( char* uri, char *value, char *type ) {
     return jack_set_property( client, metadata_uuid, uri, value, type);

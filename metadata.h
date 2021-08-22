@@ -14,3 +14,5 @@
 #define INT_TYPE  "http://www.w3.org/2001/XMLSchema#int"
 #define FLOAT_TYPE  "http://www.w3.org/2001/XMLSchema#float"
 #define BOOLEAN_TYPE  "http://www.w3.org/2001/XMLSchema#bool"
+
+#endif
