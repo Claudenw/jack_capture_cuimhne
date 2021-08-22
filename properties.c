@@ -308,9 +308,11 @@ int main (int argc, char* argv[])
                                 exit (1);
                         }
 
+                        printf( "got %d descriptions\n", cnt);
                         for (n = 0; n < cnt; ++n) {
+
                                 jack_uuid_unparse (description[n].subject, buf);
-                                printf ("%s\n", buf);
+                                printf ("subject: (%d) '%s' with %d properties\n", description[n].subject, buf, description[n].property_cnt);
                                 for (p = 0; p < description[n].property_cnt; ++p) {
                                         if (description[n].properties[p].type) {
                                                 printf ("key: %s value: %s type: %s\n", 
