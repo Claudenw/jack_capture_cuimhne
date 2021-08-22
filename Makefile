@@ -20,7 +20,7 @@ ifneq ($(OS),Darwin)
 	LINKFLAGS += -lrt
 endif
 
-targets = jack_capture
+targets = jack_capture properties
 
 all: check_dependencies jack_capture
 
@@ -58,6 +58,9 @@ dist: clean
 	ls -la jack_capture-$(VERSION)
 	rm -fr jack_capture-$(VERSION)
 
+
+properties : properties.c
+	$(CC) $(COMPILEFLAGS) properties.c -o properties $(LINKFLAGS) `cat config_flags`
 
 jack_capture: setformat.c jack_capture.c vringbuffer.c upwaker.c osc.c Makefile das_config.h config_flags
 	$(CC) $(COMPILEFLAGS) jack_capture.c vringbuffer.c upwaker.c osc.c -o jack_capture $(LINKFLAGS) `cat config_flags`
