@@ -39,16 +39,20 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
         if (subject_is_client) {
                 char* cstr = argv[(*optind)++];
                 char* ustr;
+                fprintf(stderr, "getting subject for client '%s'\n", cstr);
 
                 if ((ustr = jack_get_uuid_for_client_name (client, cstr)) == NULL) {
                         fprintf (stderr, "cannot get UUID for client named %s\n", cstr);
                         return -1;
                 }
+                fprintf(stderr, "client '%s' uuid '%s'\n", cstr, ustr);
+
                 
                 if (jack_uuid_parse (ustr, &uuid)) {
                         fprintf (stderr, "cannot parse client UUID as UUID\n");
                         return -1;
                 }
+                fprintf(stderr, "client '%s' uuid '%s' resolves to %ld\n", cstr, ustr, uuid);
 
                 subject = cstr;
 
@@ -56,6 +60,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
 
                 char* pstr = argv[(*optind)++];
                 jack_port_t* port;
+                fprintf(stderr, "getting subject for port '%s'\n", pstr);
 
                 if ((port = jack_port_by_name (client, pstr)) == NULL) {
                         fprintf (stderr, "cannot find port name %s\n", pstr);
@@ -63,15 +68,19 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                 }
                 
                 uuid = jack_port_uuid (port);
+                fprintf(stderr, "port '%s' uuid %ld\n", pstr, uuid);
                 subject = pstr;
 
         } else {
                 char* str = argv[(*optind)++];
                 
+                fprintf(stderr, "getting subject for uuid '%s'\n", str);
+
                 if (jack_uuid_parse (str, &uuid)) {
                         fprintf (stderr, "cannot parse subject as UUID\n");
                         return -1;
                 }
+                fprintf(stderr, "uuid '%s' resolves to %ld\n", str, uuid);
 
                 subject = str;
         }

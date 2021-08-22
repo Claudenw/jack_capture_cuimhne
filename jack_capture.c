@@ -438,7 +438,7 @@ void set_recording_metadata() {
     set_int_metadata( META_RECORDED_SECONDS_URI, recorded_seconds );
 }
 
-int init_metadata( jack_client_t *client) {
+int init_metadata() {
     char* uuid_str = jack_get_uuid_for_client_name( client, jackname );
 
     if (uuid_str == NULL) {
