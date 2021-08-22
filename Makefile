@@ -22,7 +22,7 @@ endif
 
 targets = jack_capture properties
 
-all: check_dependencies jack_capture
+all: check_dependencies jack_capture properties
 
 install: $(targets)
 	install -d $(DESTDIR)$(bindir)
