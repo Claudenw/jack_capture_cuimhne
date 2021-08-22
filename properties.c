@@ -52,7 +52,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                         fprintf (stderr, "cannot parse client UUID as UUID\n");
                         return -1;
                 }
-                fprintf(stderr, "client '%s' uuid '%s' resolves to %ld\n", cstr, ustr, uuid);
+                fprintf(stderr, "client '%s' uuid '%s' resolves to %lld\n", cstr, ustr, uuid);
 
                 subject = cstr;
 
@@ -68,7 +68,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                 }
                 
                 uuid = jack_port_uuid (port);
-                fprintf(stderr, "port '%s' uuid %ld\n", pstr, uuid);
+                fprintf(stderr, "port '%s' uuid %lld\n", pstr, uuid);
                 subject = pstr;
 
         } else {
@@ -80,7 +80,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                         fprintf (stderr, "cannot parse subject as UUID\n");
                         return -1;
                 }
-                fprintf(stderr, "uuid '%s' resolves to %ld\n", str, uuid);
+                fprintf(stderr, "uuid '%s' resolves to %lld\n", str, uuid);
 
                 subject = str;
         }
@@ -240,7 +240,7 @@ int main (int argc, char* argv[])
                 }
 
                 if (jack_set_property (client, uuid, key, value, type)) {
-                        fprintf (stderr, "cannot set value %s for key (type:'%s') %s of %s (uuid:%ld)\n", value, key, type, subject, uuid);
+                        fprintf (stderr, "cannot set value %s for key %s (type:'%s') of %s (uuid:%ld)\n", value, key, type, subject, uuid);
                         exit (1);
                 }
                 
