@@ -46,6 +46,8 @@
 #include <sys/resource.h>
 
 #include <jack/jack.h>
+#include <jack/metadata.h>
+#include <jack/uuid.h>
 
 #include <libgen.h>
 #include <sys/wait.h>
@@ -61,6 +63,7 @@ void shutdown_osc(void);
 #endif
 
 #include "jack_capture.h"
+#include "metadata.h"
 
 #include "sema.h"
 
@@ -192,6 +195,9 @@ static DEFINE_ATOMIC(bool, is_initialized) = false; // This $@#$@#$ variable is 
 static DEFINE_ATOMIC(bool, is_running) = true; // Mostly used to stop recording as early as possible.
 
 
+jack_uuid_t metadata_uuid;
+
+
 /* Buffer */
 static int block_size; // Set once only. Never changes value after that, even if jack buffer size changes.
 
@@ -214,9 +220,6 @@ static pthread_t connect_thread={0} ;
 
 // das stop semaphore
 static SEM_TYPE_T stop_sem;
-
-
-
 
 /////////////////////////////////////////////////////////////////////
 //////////////////////// VARIOUS ////////////////////////////////////
@@ -388,6 +391,88 @@ static void buffers_init(){
   current_buffer = vringbuffer_get_writing(vringbuffer);
   empty_buffer   = my_calloc(sizeof(sample_t),block_size*num_channels);
 }
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////// METADATA ////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+static metadata_t metadata;
+
+char* copy_malloc( const char* s ) {
+    return strcpy ((char *) malloc (sizeof (char) * (strlen(s)+1)), s);
+}
+
+void free_copy( char * s ) {
+    if ( s ) {
+        free( s );
+    }
+}
+
+int set_metadata( char* uri, char *value, char *type ) {
+    return jack_set_property( client, metadata_uuid, uri, value, type);
+}
+
+int set_int_metadata( char* uri, int value ) {
+    char buffer[100];
+    sprintf( buffer, "%d", value );
+    return set_metadata( uri, buffer, INT_TYPE );
+}
+
+
+int set_float_metadata( char* uri, float value ) {
+    char buffer[100];
+    sprintf( buffer, "%f", value );
+    return set_metadata( uri, buffer, FLOAT_TYPE );
+}
+
+int set_bool_metadata( char* uri, bool value ) {
+    char buffer[100];
+    sprintf( buffer, "%d", value );
+    return set_metadata( uri, buffer, BOOLEAN_TYPE );
+}
+
+void set_recording_metadata() {
+    int   num_bufleft = vringbuffer_writing_size(vringbuffer);
+    set_int_metadata( META_BUF_LEFT_URI, num_bufleft );
+    int   num_buffers = vringbuffer_reading_size(vringbuffer)+ num_bufleft;
+    set_int_metadata( META_NUM_BUFFERS_URI, num_buffers );
+    set_float_metadata( META_BUF_LEN_URI, buffers_to_seconds(num_buffers) );
+    set_float_metadata( META_BUF_LEFT_URI, buffers_to_seconds(num_bufleft) );
+
+    int   recorded_seconds;
+    if(timemachine_mode==true)
+        recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
+    else {
+        recorded_seconds= (int)frames_to_seconds(ATOMIC_GET(num_frames_recorded));
+
+    }
+    set_int_metadata( META_RECORDED_SECONDS_URI, recorded_seconds );
+}
+
+int init_metadata( jack_client_t *client) {
+    char* uuid_str = jack_get_uuid_for_client_name( client, jackname );
+
+    if (uuid_str == NULL) {
+        fprintf(stderr,"Cannot get UUID for client named %s\n", jackname );
+        return -1;
+    }
+
+    if (jack_uuid_parse( uuid_str, &metadata_uuid )) {
+        fprintf (stderr, "cannot parse %s UUID as UUID\n", jackname);
+        return -1;
+    }
+
+    set_recording_metadata();
+
+    set_bool_metadata( META_DISK_HIGH_PRIORITY_URI, disk_thread_has_high_priority );
+    set_int_metadata( META_TOTAL_OVERRUNS_URI, total_overruns );
+    set_int_metadata( META_TOTAL_XRUNS_URI, total_xruns );
+    set_int_metadata( META_TOTAL_DISK_ERRORS_URI, disk_errors );
+
+    return 0;
+
+}
+
 
 
 
@@ -710,15 +795,21 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
     }
   }
 
+
   if(show_bufferusage){
     int   num_bufleft = vringbuffer_writing_size(vringbuffer);
+    set_int_metadata( META_BUF_LEFT_URI, num_bufleft );
     int   num_buffers = (vringbuffer_reading_size(vringbuffer)+ vringbuffer_writing_size(vringbuffer));
+    set_int_metadata( META_NUM_BUFFERS_URI, num_buffers );
     float buflen      = buffers_to_seconds(num_buffers);
+    set_float_metadata( META_BUF_LEN_URI, buffers_to_seconds(num_buffers) );
     float bufleft     = buffers_to_seconds(num_bufleft);
-    int   recorded_seconds = (int)frames_to_seconds(ATOMIC_GET(num_frames_recorded));
+    set_float_metadata( META_BUF_LEFT_URI, buffers_to_seconds(num_buffers) );
+    int recorded_seconds = (int)frames_to_seconds(ATOMIC_GET(num_frames_recorded));
     if(timemachine_mode==true)
       recorded_seconds = (int)frames_to_seconds(num_frames_written_to_disk);
     int   recorded_minutes = recorded_seconds/60;
+    set_int_metadata( META_RECORDED_SECONDS_URI, recorded_seconds );
 
     char buffer_string[1000];
     {
@@ -748,6 +839,7 @@ static void print_console(bool move_cursor_to_top_doit,bool force_update){
            );
     print_ln();
   }else{
+      set_recording_metadata();
     printf("%c[0m",0x1b); // reset colors
     fprintf(stderr,"%c[0m",0x1b); // reset colors
   }
@@ -815,6 +907,8 @@ static void *helper_thread_func(void *arg){
 
     if(use_vu || show_bufferusage)
       print_console(move_cursor_to_top_doit,false);
+    else
+        set_recording_metadata();
 
     if(init_meterbridge_ports()==1 && use_vu==false && show_bufferusage==false) // Note, init_meterbridge_ports will usually exit at the top of the function, where it tests for ports_meterbridge!=NULL (this stuff needs to be handled better)
       break;
@@ -1247,8 +1341,12 @@ static void close_soundfile(void){
     print_message("jack_capture encountered %d jack x-runs.\n", total_xruns);
 
   disk_errors = 0;
+  set_int_metadata( META_TOTAL_DISK_ERRORS_URI, disk_errors );
   total_overruns = 0;
+  set_int_metadata( META_TOTAL_OVERRUNS_URI, total_overruns );
   total_xruns = 0;
+  set_int_metadata( META_TOTAL_XRUNS_URI, total_xruns );
+
 }
 
 static int rotate_file(size_t frames, int reset_totals){
@@ -1285,8 +1383,11 @@ static int rotate_file(size_t frames, int reset_totals){
 
     /* reset totals on file-rotate */
     disk_errors = 0;
+    set_int_metadata( META_TOTAL_DISK_ERRORS_URI, disk_errors );
     total_overruns = 0;
+    set_int_metadata( META_TOTAL_OVERRUNS_URI, total_overruns );
     total_xruns = 0;
+    set_int_metadata( META_TOTAL_XRUNS_URI, total_xruns );
   }
 
   if(!open_soundfile()) return 0;
@@ -1398,6 +1499,7 @@ static int disk_write(void *data,size_t frames){
 		sf_strerror(soundfile)
 		);
     disk_errors++;
+    set_int_metadata( META_TOTAL_DISK_ERRORS_URI, disk_errors );
     return 0;
   }
   return 1;
@@ -1439,6 +1541,7 @@ static void disk_thread_control_priority(void){
     {
       if(set_high_priority()==true){
         disk_thread_has_high_priority=true;
+        set_bool_metadata( META_DISK_HIGH_PRIORITY_URI, disk_thread_has_high_priority );
         print_message("Less than half the buffer used. Setting higher priority for the disk thread.\n");
       }else{
         static bool message_sent=false;
@@ -1594,6 +1697,7 @@ static bool process_new_current_buffer(int frames_left){
   current_buffer=(buffer_t*)vringbuffer_get_writing(vringbuffer);
   if(current_buffer==NULL){
     total_overruns++;
+    set_int_metadata( META_TOTAL_OVERRUNS_URI, total_overruns );
     unreported_overruns += frames_left;
     return false;
   }
@@ -1736,6 +1840,7 @@ static int process(jack_nframes_t nframes, void *arg){
 static int xrun(void *arg){
   (void)arg;
   total_xruns++;
+  set_int_metadata( META_TOTAL_XRUNS_URI, total_xruns );
   return 0;
 }
 
