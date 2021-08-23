@@ -52,7 +52,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                         fprintf (stderr, "cannot parse client UUID as UUID\n");
                         return -1;
                 }
-                fprintf(stderr, "client '%s' uuid '%s' resolves to %ld\n", cstr, ustr, uuid);
+                fprintf(stderr, "client '%s' uuid '%s' resolves to %lld\n", cstr, ustr, uuid);
 
                 subject = cstr;
 
@@ -68,7 +68,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                 }
                 
                 uuid = jack_port_uuid (port);
-                fprintf(stderr, "port '%s' uuid %ld\n", pstr, uuid);
+                fprintf(stderr, "port '%s' uuid %lld\n", pstr, uuid);
                 subject = pstr;
 
         } else {
@@ -80,7 +80,7 @@ get_subject (jack_client_t* client, char* argv[], int* optind)
                         fprintf (stderr, "cannot parse subject as UUID\n");
                         return -1;
                 }
-                fprintf(stderr, "uuid '%s' resolves to %ld\n", str, uuid);
+                fprintf(stderr, "uuid '%s' resolves to %lld\n", str, uuid);
 
                 subject = str;
         }
